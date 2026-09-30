@@ -1,0 +1,73 @@
+{
+  "name": "pip",
+  "productName": "Pip",
+  "private": true,
+  "version": "1.0.0",
+  "description": "Pip, a tiny companion that lives at the top of your screen and watches your Claude Code sessions",
+  "author": "aymengraoui",
+  "main": "electron/main.js",
+  "scripts": {
+    "dev": "vite",
+    "build:ui": "vite build",
+    "icon": "electron scripts/make-icon.js",
+    "start": "vite build && electron .",
+    "dist": "vite build && electron scripts/make-icon.js && electron-builder --win nsis --publish never"
+  },
+  "build": {
+    "appId": "dev.local.pip",
+    "productName": "Pip",
+    "copyright": "Pip",
+    "publish": null,
+    "directories": {
+      "output": "release",
+      "buildResources": "build"
+    },
+    "files": [
+      "electron/**",
+      "dist/**",
+      "build/icon.png",
+      "package.json"
+    ],
+    "extraResources": [
+      {
+        "from": "resources/hook.js",
+        "to": "hook.js"
+      }
+    ],
+    "asarUnpack": [
+      "node_modules/koffi/**"
+    ],
+    "win": {
+      "target": [
+        {
+          "target": "nsis",
+          "arch": [
+            "x64"
+          ]
+        }
+      ],
+      "icon": "build/icon.png",
+      "executableName": "Pip"
+    },
+    "nsis": {
+      "oneClick": true,
+      "perMachine": false,
+      "runAfterFinish": true,
+      "createDesktopShortcut": false,
+      "createStartMenuShortcut": true,
+      "shortcutName": "Pip",
+      "artifactName": "Pip-Setup-${version}.${ext}"
+    }
+  },
+  "devDependencies": {
+    "@vitejs/plugin-react": "^6.1.1",
+    "electron": "^44.5.1",
+    "electron-builder": "^26.15.3",
+    "react": "^19.3.0",
+    "react-dom": "^19.3.0",
+    "vite": "^8.3.1"
+  },
+  "dependencies": {
+    "koffi": "^3.3.2"
+  }
+}
