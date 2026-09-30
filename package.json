@@ -5,6 +5,8 @@
   "version": "1.0.0",
   "description": "Pip, a tiny companion that lives at the top of your screen and watches your Claude Code sessions",
   "author": "aymengraoui",
+  "license": "MIT",
+  "repository": "github:aymengraoui/pip",
   "main": "electron/main.js",
   "scripts": {
     "dev": "vite",

@@ -33,3 +33,7 @@ Installed to `%LOCALAPPDATA%\Programs\pip\Pip.exe`. Data lives in `%APPDATA%\Pip
 - `resources/hook.js`: the relay Claude Code runs on each hook event. It only appends to `events.jsonl` and never prints, so it can never answer a permission prompt.
 
 Debug: `PIP_DEBUG=1` exposes `window.__pip` (engine, settings panel, `engine.frameStats()`) to DevTools.
+
+## License
+
+MIT, see [LICENSE](LICENSE).
