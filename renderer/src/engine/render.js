@@ -209,8 +209,14 @@ export function drawBubble(t) {
   ctx.font = `600 12px ${FONT}`;
   const label = fit(text, 300);
   const bw = ctx.measureText(label).width + 18, bh = 24;
-  const under = speaker.y + speaker.r + 12;
+  // Close enough that the tail can bridge the gap and touch whoever is talking:
+  // a bubble floating under the notch reads as the notch talking, not Pip.
+  const under = speaker.y + speaker.r + 9;
   const by = panelName() ? Math.max(under, L.h.v + 10) : under;
+  // The tail stretches up to the speaker, within reason. Too far (a panel has
+  // pushed the bubble down the screen) and it is better to have no tail at all.
+  const reach = by - (speaker.y + speaker.r * 0.8);
+  const tail = reach <= 26 ? clamp(reach, 5, 26) : 0;
   const bx = clamp(x - bw / 2, 6, W - bw - 6);
 
   ctx.save();
@@ -223,9 +229,11 @@ export function drawBubble(t) {
   ctx.fillStyle = "#FFFFFF";
   ctx.beginPath();
   ctx.roundRect(bx, by, bw, bh, 11);
-  ctx.moveTo(x - 6, by + 1);
-  ctx.lineTo(x, by - 6);
-  ctx.lineTo(x + 6, by + 1);
+  if (tail) {
+    ctx.moveTo(x - 6, by + 1);
+    ctx.lineTo(x, by - tail);
+    ctx.lineTo(x + 6, by + 1);
+  }
   ctx.fill();
   ctx.shadowBlur = 0;
   ctx.fillStyle = "#1B1B22";
