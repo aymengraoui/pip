@@ -26,6 +26,29 @@ function summarize(input) {
   , 80);
 }
 
+/**
+ * A short, human line about how a tool call went, for Pip's activity view.
+ * Shapes vary by tool, so every field is optional and nothing here may throw.
+ */
+function outcome(e) {
+  const r = e.tool_response;
+  let text = "";
+  if (typeof r === "string") text = r;
+  else if (r && typeof r === "object") {
+    if (Array.isArray(r.content)) {
+      const first = r.content.find((c) => c && typeof c.text === "string");
+      if (first) text = first.text;
+    }
+    for (const k of ["error", "stderr", "stdout", "output", "message", "result"]) {
+      if (text) break;
+      if (typeof r[k] === "string") text = r[k];
+    }
+    if (r.is_error || r.error) text = "error: " + text;
+  }
+  if (!text && typeof e.error === "string") text = "error: " + e.error;
+  return clip(text, 100);
+}
+
 let raw = "";
 process.stdin.setEncoding("utf8");
 process.stdin.on("data", (c) => (raw += c));
@@ -44,6 +67,8 @@ process.stdin.on("end", () => {
       detail: summarize(input),
       msg: clip(e.message || e.prompt || ""),
       ntype: e.notification_type || "",
+      // How the tool call turned out, so Pip can show it without the terminal.
+      res: outcome(e),
       // Set when the event fires inside a subagent, and on SubagentStart/Stop.
       aid: e.agent_id || "",
       atype: e.agent_type || (spawnsAgent ? input.subagent_type || "general-purpose" : ""),

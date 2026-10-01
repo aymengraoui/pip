@@ -1,6 +1,6 @@
 import { createRoot } from "react-dom/client";
 import App from "./App.jsx";
-import { drawIcon } from "./engine.js";
+import { drawIcon } from "../engine/index.js";
 import "./notch.css";
 
 if (location.hash === "#icon") {

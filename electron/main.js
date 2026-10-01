@@ -155,6 +155,7 @@ function updateTray(info = {}) {
   tray.setContextMenu(Menu.buildFromTemplate([
     { label: `Pip · ${status}`, enabled: false },
     { type: "separator" },
+    { label: "Activity", click: () => openPanel("inspect") },
     { label: "Settings", click: () => openPanel("settings") },
     { label: "Pause Pip", type: "checkbox", checked: userPaused, click: (i) => { userPaused = i.checked; applyRunState(); } },
     { label: "Quit Pip", click: () => app.quit() },
@@ -210,6 +211,7 @@ ipcMain.on("win-height", (_e, h) => {
 ipcMain.on("focus", (_e, on) => setFocusable(!!on));
 ipcMain.on("menu", () => {
   Menu.buildFromTemplate([
+    { label: "Activity", click: () => send("panel", "inspect") },
     { label: "Settings", click: () => send("panel", "settings") },
     { label: "Demo (play every state)", click: () => send("demo") },
     { label: "Pause Pip", click: () => { userPaused = true; applyRunState(); } },
