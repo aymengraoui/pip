@@ -49,6 +49,10 @@ function load() {
  * for nothing, after every update. If the staged file is the version we are
  * already running, it has been consumed and can go. Anything still pending is
  * left alone.
+ *
+ * Called at startup and again on every check, because the startup attempt
+ * usually fails: we were just launched *by* that installer, which is still
+ * running and still holding the file open. A minute later it is gone.
  */
 function tidyCache() {
   try {
@@ -88,6 +92,7 @@ async function check(manual = false) {
 function schedule(delay) {
   clearTimeout(timer);
   timer = setTimeout(async () => {
+    tidyCache(); // the startup attempt was probably too early; try again
     await check();
     // Asleep or failed: come back sooner than the usual six hours.
     schedule(state.status === "idle" ? EVERY : state.status === "ready" ? EVERY : RETRY);
