@@ -90,6 +90,20 @@ export function cheerSpawn() {
   if (Math.random() < 0.45) say(pick(["go little buddy!", "helpers, assemble!", "you got this!", "off you go!", "sprout squad!"]), 1.8);
 }
 
+/** You came back, and there is news. */
+export function welcomeBack() {
+  pip.emote("surprised", 0.8);
+  sound.sfx.boop();
+  pip.hop(130);
+}
+
+/** Something looks stuck. Pip mentions it once, and wears it until it clears. */
+export function fret(worry) {
+  pip.emote("worried", 3);
+  sound.sfx.error();
+  say(pick(["hmm… this looks stuck", "is it stuck?", "nothing's happening…"]), 3);
+}
+
 /** Say hello on startup. */
 export function greet() {
   sound.sfx.hi();
@@ -289,6 +303,7 @@ export function face(t) {
     case "surprised": eyes = "wide"; mouth = "o"; break;
     case "yawn": eyes = "closed"; mouth = "yawn"; break;
     case "proud": eyes = "happy"; mouth = "smile"; break;
+    case "worried": eyes = "wide"; mouth = "wavy"; break;
   }
   return { eyes, mouth };
 }

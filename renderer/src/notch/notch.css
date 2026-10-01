@@ -127,3 +127,8 @@ button { font: inherit; }
 .chip.go { margin-left: auto; border-color: #2F4F43; color: var(--mint); }
 .chip.go:hover { background: #1B2B25; }
 .insp-now.waiting { border-color: #5A4420; background: #1B1710; }
+.insp-worry {
+  flex: none; display: flex; flex-direction: column; gap: 2px; padding: 7px 10px;
+  border: 1px solid #5A3A20; background: #1C1611; border-radius: 10px;
+}
+.insp-worry b { color: #FFB169; font-weight: 650; }

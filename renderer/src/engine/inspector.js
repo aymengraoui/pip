@@ -8,6 +8,7 @@
 
 import { MOODS, agents, history, lead, running, sessions } from "./model.js";
 import { project } from "./util.js";
+import { check as checkStuck } from "./watchdog.js";
 
 const AGENT_STATES = {
   working: { label: "Working", accent: "#3D9BFF" },
@@ -102,6 +103,7 @@ export function snapshot() {
     accent: state.accent,
     background: agent ? !!it.bg : false,
     pid: it.pid || 0,
+    stuck: live ? checkStuck(it) : null,
     desc: agent ? it.desc : it.prompt || "",
     tools: it.tools,
     spawned: agent ? 0 : it.spawned,

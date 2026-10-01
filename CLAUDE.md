@@ -194,6 +194,33 @@ finishes (`PLAY_FROM`, and the `playing` flag in `layout.js`), so one of them
 ending doesn't yank the rest back inside. While it is on, the pill stops
 reserving width for them and the "+n" badge is hidden — they are all on screen.
 
+## Noticing things
+
+`engine/watchdog.js` reads the activity logs the model already keeps and applies
+three shy rules: the same tool and argument three times in four minutes (`loop`),
+one call still running past ten minutes (`long`), and silence past six minutes
+with nothing in flight and the turn never ended (`stall`), plus `overrun` for an
+agent past 3× the median for its type, taken from `model.history`.
+
+Two things that are easy to get wrong here, both learned the hard way:
+
+- **The stall rule cannot read the session state.** `computeMood` ages a quiet
+  session to `idle` at ten minutes, which would hide exactly the case worth
+  reporting. It reads the log instead.
+- **Silence is not the signal; silence with nothing open is.** A tool that is
+  genuinely running is a long job, not a stall, and the two need different words
+  or the thing cries wolf on every slow build.
+
+`current()` caches the scan for five seconds, so layout can call it per frame.
+`index.js` only reacts when the answer changes, which is when Pip frets.
+
+## Away and back
+
+`windows.idleSeconds()` is `GetLastInputInfo` plus `GetTickCount`: two calls,
+polled every 15 s from the main process and off entirely in game mode. Past three
+minutes you are away, and `model.totals` is snapshotted; on return the difference
+becomes one spoken line. One line, once — no badge, no list to dismiss.
+
 ## Jumping to the terminal
 
 `resources/hook.js` records `process.ppid`, which is the Claude Code process

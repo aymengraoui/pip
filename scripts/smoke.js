@@ -13,6 +13,7 @@ import * as engine from "../renderer/src/engine/index.js";
 import { agents, sessions, history } from "../renderer/src/engine/model.js";
 import { viewOf } from "../renderer/src/engine/minis.js";
 import { L } from "../renderer/src/engine/layout.js";
+import * as watchdog from "../renderer/src/engine/watchdog.js";
 
 // -- virtual clock, so 10 minutes of Pip take 20 ms ---------------------------
 
@@ -157,6 +158,24 @@ const spots = crew.map((m) => viewOf(m).x.t);
 advance(6000);
 check("and keep moving around", crew.some((m, i) => Math.abs(viewOf(m).x.t - spots[i]) > 1));
 
+// Where they go comes from what they are doing, not from a dice roll.
+feed([{ ev: "PreToolUse", aid: "a1", tool: "Grep", detail: "same" }]);
+feed([{ ev: "PreToolUse", aid: "a2", tool: "Grep", detail: "same" }]);
+advance(9000);
+const apart = Math.hypot(viewOf(crew[0]).x.t - viewOf(crew[1]).x.t, viewOf(crew[0]).y.t - viewOf(crew[1]).y.t);
+check("two helpers on the same tool huddle", apart < 90, `${Math.round(apart)} px apart`);
+
+// A failure keeps one of them low and still.
+feed([{ ev: "PostToolUseFailure", aid: "a1", tool: "Grep", res: "error: no matches" }]);
+feed([{ ev: "PreToolUse", aid: "a1", tool: "Read", detail: "notes.md" }]);
+advance(9000);
+const sulker = [...agents.values()].find((m) => m.aid === "a1");
+check("a helper that just failed keeps to the lower half", viewOf(sulker).y.t > L.h.v + 28, String(Math.round(viewOf(sulker).y.t - L.h.v)));
+
+// Put a1 back where the inspector checks below expect to find it.
+feed([{ ev: "PostToolUse", aid: "a1", tool: "Read" }, { ev: "PreToolUse", aid: "a1", tool: "Grep", detail: "theme" }]);
+advance(300);
+
 // -- the inspector ------------------------------------------------------------
 
 const explore = [...agents.values()].find((m) => m.type === "Explore");
@@ -243,6 +262,46 @@ const afterOff = pokes;
 feed([{ ev: "PostToolUse", tool: "Read" }]);
 check("unsubscribing stops it", pokes === afterOff);
 engine.closeInspector();
+
+// -- the watchdog -------------------------------------------------------------
+
+const sid3 = "smoke-stuck";
+const feed3 = (events) => engine.ingest({ events: events.map((e) => ({ t: Date.now(), sid: sid3, cwd, ...e })), replay: false });
+const loopSession = () => [...sessions.values()].find((x) => x.sid === sid3);
+
+feed3([{ ev: "SessionStart" }, { ev: "UserPromptSubmit", msg: "fix the test" }]);
+check("a fresh session is not stuck", !watchdog.check(loopSession()));
+
+// The same command, over and over.
+for (let i = 0; i < 3; i++) {
+  feed3([{ ev: "PreToolUse", tool: "Bash", tuid: "loop" + i, detail: "npm test" }]);
+  feed3([{ ev: "PostToolUseFailure", tool: "Bash", tuid: "loop" + i, res: "1 failing" }]);
+  advance(4000);
+}
+const loop = watchdog.check(loopSession());
+check("three identical calls look like a loop", loop && loop.kind === "loop", JSON.stringify(loop));
+check("and it says which call", loop && loop.text.includes("npm test"));
+
+// A tool call that never comes back is a long job, not a stall: different words.
+feed3([{ ev: "PreToolUse", tool: "Bash", tuid: "hang", detail: "sleep forever" }]);
+advance(11 * 60 * 1000);
+const long = watchdog.check(loopSession());
+check("an endless call reads as still running", long && long.kind === "long", JSON.stringify(long));
+check("and it names the tool", long && long.text.includes("Bash"));
+feed3([{ ev: "PostToolUse", tool: "Bash", tuid: "hang" }]);
+
+// Nothing running, nothing happening, and the turn never ended.
+feed3([{ ev: "UserPromptSubmit", msg: "now do the other thing" }]);
+advance(7 * 60 * 1000);
+const stall = watchdog.check(loopSession());
+check("silence with nothing running is a stall", stall && stall.kind === "stall", JSON.stringify(stall));
+check("the stall text carries no ticking number", stall && /over \d+ minutes/.test(stall.text));
+
+engine.focusInspect({ kind: "session", key: "s:" + sid3 });
+check("the panel is told what is wrong", (engine.inspectSnapshot().stuck || {}).kind === "stall", JSON.stringify(engine.inspectSnapshot().stuck));
+engine.closeInspector();
+feed3([{ ev: "SessionEnd" }]);
+advance(200);
 
 // -- the rest of the lifecycle ------------------------------------------------
 

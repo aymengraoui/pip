@@ -69,6 +69,12 @@ export default function Inspector() {
         <div className="insp-sub">{snap.desc || snap.project}</div>
       )}
 
+      {snap.stuck && (
+        <div className="insp-worry">
+          <b>{{ loop: "Going in circles", stall: "Nothing is happening", long: "Still running", overrun: "Taking much longer than usual" }[snap.stuck.kind] || "Something looks off"}</b>
+          <span className="insp-detail">{snap.stuck.text}</span>
+        </div>
+      )}
       <Doing snap={snap} />
 
       <div className="insp-stats">

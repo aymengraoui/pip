@@ -38,6 +38,7 @@ let solid = false;
 let focusable = false;
 let gaming = false;
 let userPaused = false;
+let away = false;
 const timers = {};
 
 const tail = hooks.createTail();
@@ -94,6 +95,21 @@ function cursorTick() {
   timers.cursor = setTimeout(cursorTick, near ? 40 : 200);
 }
 
+// ── are you even there? ──────────────────────────────────────────────────────
+// Two Win32 calls every 15 s. When you come back, the renderer tells you what
+// you missed.
+
+const AWAY_AFTER = 180; // seconds without a key or a mouse move
+
+function idleTick() {
+  const now = windows.idleSeconds() >= AWAY_AFTER;
+  if (now !== away) {
+    away = now;
+    send("away", away);
+  }
+  timers.idle = setTimeout(idleTick, 15000);
+}
+
 // ── game mode ────────────────────────────────────────────────────────────────
 
 function gameTick() {
@@ -112,6 +128,7 @@ function suspended() { return gaming || userPaused; }
 function applyRunState(info = {}) {
   if (suspended()) {
     clearTimeout(timers.cursor);
+    clearTimeout(timers.idle);
     clearInterval(timers.tail);
     if (focusable) setFocusable(false);
     send("pause", true);
@@ -125,6 +142,8 @@ function applyRunState(info = {}) {
     timers.tail = setInterval(() => { const ev = tail.pump(); if (ev.length) send("events", { events: ev, replay: false }); }, 200);
     clearTimeout(timers.cursor);
     cursorTick();
+    clearTimeout(timers.idle);
+    idleTick();
   }
   updateTray(info);
   send("state", publicState());

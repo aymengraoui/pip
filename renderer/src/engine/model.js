@@ -38,6 +38,9 @@ export const history = [];
 export let mood = "sleeping";
 export let lead = null;
 
+/** Running totals, so Pip can say what happened while you were away. */
+export const totals = { turns: 0, failures: 0, helpers: 0, asked: 0 };
+
 const reactions = { onSpawn() {}, onFinish() {}, onMood() {} };
 export function setReactions(r) { Object.assign(reactions, r); }
 
@@ -150,6 +153,7 @@ export function finish(m, quiet, t) {
   m.tool = "";
   closeAll(m, t);
   note(m, { kind: "done" }, t);
+  totals.helpers++;
   if (quiet) { agents.delete(m.key); return; }
   reactions.onFinish(m);
 }
@@ -207,6 +211,7 @@ export function apply(e, quiet) {
       s.tool = e.tool;
       s.detail = e.detail || e.msg;
       note(s, { kind: "permission", tool: e.tool, text: e.detail || e.msg }, e.t);
+      totals.asked++;
     }
     return;
   }
@@ -240,6 +245,7 @@ export function apply(e, quiet) {
       s.state = "thinking";
       s.tool = "";
       closeTool(s, e, e.ev === "PostToolUseFailure");
+      if (e.ev === "PostToolUseFailure") totals.failures++;
       if (AGENT_TOOLS.has(e.tool)) {
         const m = agents.get("tu:" + e.tuid);
         // A background agent keeps working after its tool call returns.
@@ -251,6 +257,7 @@ export function apply(e, quiet) {
       s.tool = e.tool;
       s.detail = e.detail;
       note(s, { kind: "permission", tool: e.tool, text: e.detail }, e.t);
+      totals.asked++;
       break;
     case "Notification":
       if (e.ntype === "permission_prompt" || /permission/i.test(e.msg || "")) {
@@ -265,6 +272,7 @@ export function apply(e, quiet) {
       s.detail = "";
       closeAll(s, e.t);
       note(s, { kind: "turn" }, e.t);
+      totals.turns++;
       for (const m of agents.values()) if (m.sid === sid && !m.bg) finish(m, quiet, e.t);
       break;
     case "StopFailure":
@@ -272,6 +280,7 @@ export function apply(e, quiet) {
       s.detail = e.msg;
       closeAll(s, e.t);
       note(s, { kind: "error", text: e.msg }, e.t);
+      totals.failures++;
       break;
     case "SubagentStart": {
       // The Agent tool call already made a sproutling; adopt it, so later events

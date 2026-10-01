@@ -65,10 +65,21 @@ Installed to `%LOCALAPPDATA%\Programs\pip\Pip.exe`. Data lives in `%APPDATA%\Pip
   always let a background app steal focus; when it refuses, Pip makes the
   taskbar button blink instead.
 - **The playground**: with two or more helpers working, they leave the notch and
-  amble around the strip of screen underneath it, looking where they are going
-  and hopping now and then. Only they take clicks down there — the rest of that
-  strip stays click-through — and they file back into the notch the moment you
-  open it, or when the last one finishes.
+  amble around the strip of screen underneath it. Where they go is the work, not
+  a dice roll: two helpers running the same tool drift together, a busy one moves
+  more, one that just failed slumps and stays low for a few seconds, and
+  background work keeps to the edges. Only they take clicks down there — the rest
+  of that strip stays click-through — and they file back into the notch the
+  moment you open it.
+- **Pip says when something looks stuck.** It sits outside every session and
+  keeps their logs, so it notices what you wouldn't while reading one terminal:
+  the same command three times in a few minutes, a tool that has been running
+  for over ten, or a session that went quiet with nothing in flight. The notch
+  says so and the panel says which. No popups, and the thresholds are shy on
+  purpose.
+- **While you were away.** Pip knows when you haven't touched the keyboard for a
+  few minutes. Come back and it tells you what you missed in one line — "2 turns
+  finished, 1 failure" — and then shuts up.
 - **Settings** live in the notch: the gear button (or the tray icon, or right-click Pip). Start with Windows, sounds, game mode, extra games, Claude Code hooks, demo, quit.
 - **Subagents**: every agent Claude Code spawns pops out of Pip as a colored sproutling and poofs away when it finishes.
 - **Updates** install themselves. Pip checks GitHub a minute after it starts and

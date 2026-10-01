@@ -36,6 +36,11 @@ function load() {
     szExeFile: koffi.array("uint16", 260),
   });
 
+  koffi.struct("PIP_LASTINPUT", {
+    cbSize: "uint32",
+    dwTime: "uint32",
+  });
+
   koffi.struct("PIP_FLASHWINFO", {
     cbSize: "uint32",
     hwnd: "void *",
@@ -68,6 +73,8 @@ function load() {
     AttachThreadInput: user32.func("bool __stdcall AttachThreadInput(uint32 from, uint32 to, bool attach)"),
     FlashWindowEx: user32.func("bool __stdcall FlashWindowEx(PIP_FLASHWINFO *info)"),
     GetAncestor: user32.func("void * __stdcall GetAncestor(void *hwnd, uint32 flags)"),
+    GetLastInputInfo: user32.func("bool __stdcall GetLastInputInfo(_Inout_ PIP_LASTINPUT *info)"),
+    GetTickCount: kernel32.func("uint32 __stdcall GetTickCount()"),
   };
   return api;
 }
@@ -206,6 +213,24 @@ function focusProcess(pid) {
   }
 }
 
+/**
+ * Seconds since the last keypress or mouse move, anywhere on the machine.
+ * Two cheap calls; this is how Pip knows you aren't there. Returns 0 if the
+ * lookup fails, which reads as "present" and keeps Pip quiet.
+ */
+function idleSeconds() {
+  try {
+    const a = load();
+    const info = { cbSize: 8, dwTime: 0 };
+    if (!a.GetLastInputInfo(info)) return 0;
+    // GetTickCount wraps every 49 days; a negative difference means it just has.
+    const ms = a.GetTickCount() - info.dwTime;
+    return ms > 0 ? Math.floor(ms / 1000) : 0;
+  } catch {
+    return 0;
+  }
+}
+
 /** Is that process still around? Used to grey out the button. */
 function alive(pid) {
   if (!pid) return false;
@@ -216,7 +241,7 @@ function alive(pid) {
   }
 }
 
-module.exports = { focusProcess, windowFor, alive };
+module.exports = { focusProcess, windowFor, alive, idleSeconds };
 
 if (require.main === module) {
   const pid = Number(process.argv[2] || process.ppid);
@@ -225,5 +250,6 @@ if (require.main === module) {
   const ms = Number(process.hrtime.bigint() - t) / 1e6;
   console.log(`pid ${pid} -> chain ${ancestors(pid).join(" -> ")}`);
   console.log("window:", target, `(${ms.toFixed(1)} ms)`);
+  console.log("idle:", idleSeconds(), "s");
   if (process.argv[3] === "--focus" && target) console.log("raise:", raise(target.hwnd));
 }

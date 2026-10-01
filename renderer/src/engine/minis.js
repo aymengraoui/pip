@@ -5,7 +5,7 @@
 // that start inside Pip, so the sproutling pops out of it and, when the agent
 // finishes, puffs away.
 
-import { clamp, now, rand, Spring } from "./util.js";
+import { clamp, now, rand, wall, Spring } from "./util.js";
 import { ctx, ellipse, FONT } from "./gfx.js";
 import * as creature from "./creature.js";
 import * as particles from "./particles.js";
@@ -46,18 +46,82 @@ export function viewOf(m) {
 // When more than one helper is working, they get a patch of screen under the
 // notch to mill about in instead of being lined up inside it. layout.js decides
 // where that patch is; this decides what they do with it.
+//
+// They do not move at random. Where a sproutling goes, how often, and how it
+// holds itself all come from what its agent is actually doing, so the playground
+// is a readout you can learn to glance at rather than decoration:
+//
+//   same tool as a neighbour  they drift together
+//   busy (tools per minute)   moves more often
+//   just failed               slumps and stays low, for twenty seconds
+//   running in the background  keeps to the edges, out of the way
 
-/** Pick a spot, preferring one that isn't on top of somebody else. */
+const PROFILE_MS = 2000;   // how often a sproutling reconsiders what it is
+const BUSY_RATE = 4;       // tool calls a minute that counts as busy
+const SULK_MS = 20000;     // how long a failure shows on a sproutling
+
+/** What this agent is like right now, recomputed rarely. */
+function profile(m) {
+  const v = viewOf(m);
+  const w = wall();
+  if (v.profileAt && w - v.profileAt < PROFILE_MS) return v.profile;
+  let calls = 0;
+  for (const e of m.log) if (e.kind === "tool" && w - e.t < 60e3) calls++;
+  // A slump has to outlast the failure itself, or you would never see it: the
+  // next call starts within a second and the sproutling would pop back up.
+  let failedAt = 0;
+  for (let i = m.log.length - 1; i >= 0; i--) {
+    if (m.log[i].failed) { failedAt = m.log[i].end || m.log[i].t; break; }
+  }
+  v.profile = {
+    rate: calls,
+    busy: calls >= BUSY_RATE,
+    failed: !!failedAt && w - failedAt < SULK_MS,
+    tool: m.tool || "",
+    edge: !!m.bg,
+  };
+  v.profileAt = w;
+  return v.profile;
+}
+
+/** The middle of wherever the others doing the same work are standing. */
+function peersDoing(self, tool) {
+  if (!tool) return null;
+  let x = 0, y = 0, n = 0;
+  for (const m of agents.values()) {
+    if (m === self || !m.view || m.tool !== tool) continue;
+    x += m.view.x.t; y += m.view.y.t; n++;
+  }
+  return n ? { x: x / n, y: y / n } : null;
+}
+
+/** Pick a spot: near whoever is doing the same thing, else away from everyone. */
 function spot(area, self) {
+  const p = profile(self);
+
+  // Working on the same tool as somebody else: go and stand with them.
+  const huddle = peersDoing(self, p.tool);
+  if (huddle && Math.random() < 0.65) {
+    return {
+      x: clamp(huddle.x + rand(-26, 26), area.x0, area.x1),
+      y: clamp(huddle.y + rand(-10, 10), area.y0, area.y1),
+    };
+  }
+
   let best = null, bestGap = -1;
   for (let i = 0; i < 4; i++) {
-    const p = { x: rand(area.x0, area.x1), y: rand(area.y0, area.y1) };
+    // Background work keeps to the edges; a failed one stays low.
+    const x = p.edge
+      ? (Math.random() < 0.5 ? rand(area.x0, area.x0 + 40) : rand(area.x1 - 40, area.x1))
+      : rand(area.x0, area.x1);
+    const y = p.failed ? rand((area.y0 + area.y1) / 2, area.y1) : rand(area.y0, area.y1);
+    const candidate = { x, y };
     let gap = Infinity;
     for (const m of agents.values()) {
       if (m === self || !m.view) continue;
-      gap = Math.min(gap, Math.hypot(p.x - m.view.x.t, p.y - m.view.y.t));
+      gap = Math.min(gap, Math.hypot(candidate.x - m.view.x.t, candidate.y - m.view.y.t));
     }
-    if (gap > bestGap) { bestGap = gap; best = p; }
+    if (gap > bestGap) { bestGap = gap; best = candidate; }
   }
   return best;
 }
@@ -73,13 +137,19 @@ export function roam(m, area) {
     v.nextSpot = 0;
     v.nextHop = t + rand(0.8, 4);
   }
+  const p = profile(m);
   if (t > v.nextSpot) {
-    const p = spot(area, m);
-    v.x.t = p.x;
-    v.y.t = p.y;
-    v.nextSpot = t + rand(1.4, 3.8);
+    const next = spot(area, m);
+    v.x.t = next.x;
+    v.y.t = next.y;
+    // The busier it is, the less it stands still.
+    v.nextSpot = t + rand(1.4, 3.8) / (1 + p.rate * 0.18);
   }
-  if (t > v.nextHop) { v.y.vel -= HOP; v.nextHop = t + rand(2.5, 7); }
+  // A sproutling that just failed is in no mood to bounce.
+  if (t > v.nextHop) {
+    if (!p.failed) v.y.vel -= HOP;
+    v.nextHop = t + rand(2.5, 7);
+  }
 }
 
 /** Back to a place it has to be: stiffen the springs again. */
@@ -149,6 +219,7 @@ export function draw(t) {
     const working = m.state === "working";
     const doneK = m.state === "done" ? t - m.doneAt : -1;
     const strolling = v.roaming && Math.abs(v.x.vel) > 5;
+    const mood = v.roaming ? profile(m) : null;
     const bob = working
       ? -Math.abs(Math.sin(t * 7 + v.phase)) * 2.2
       : doneK >= 0 && doneK < 0.5 ? -Math.sin(doneK * Math.PI * 2) * 5 : 0;
@@ -159,14 +230,17 @@ export function draw(t) {
     creature.draw(v.x.v, y, sc, {
       pal: creature.palette(m.hue), t,
       sx: 1 + (working ? Math.sin(t * 7 + v.phase) * 0.04 : 0), sy: 1,
-      rot: working ? Math.sin(t * 3 + v.phase) * 0.08 : 0,
+      // A failed one leans, which reads as a slump at this size.
+      rot: mood && mood.failed ? 0.18 : working ? Math.sin(t * 3 + v.phase) * 0.08 : 0,
       // Roaming, it looks where it is going; otherwise it glances about.
       look: v.roaming
         ? { x: clamp(v.x.vel / 45, -1, 1), y: 0.15 }
         : { x: working ? Math.sin(t * 1.7 + v.phase) : 0, y: working ? 0.4 : 0 },
       open: t < v.blinkUntil ? 0.05 : 1,
-      eyes: m.state === "done" ? "happy" : "normal",
-      mouth: m.state === "done" ? "grin" : Math.sin(t * 1.1 + v.phase) > 0.4 ? "tongue" : "flat",
+      eyes: m.state === "done" ? "happy" : mood && mood.failed ? "closed" : "normal",
+      mouth: m.state === "done" ? "grin"
+        : mood && mood.failed ? "wavy"
+        : Math.sin(t * 1.1 + v.phase) > 0.4 ? "tongue" : "flat",
       blush: 0.5,
       prop: working,
       leafSpin: t * 26 + v.phase,

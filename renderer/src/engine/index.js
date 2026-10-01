@@ -30,6 +30,7 @@ import * as pipMod from "./pip.js";
 import * as render from "./render.js";
 import * as sound from "./sound.js";
 import * as speech from "./speech.js";
+import * as watchdog from "./watchdog.js";
 import { playDemo } from "./demo.js";
 import { fresh } from "./pointer.js";
 import { now } from "./util.js";
@@ -73,6 +74,41 @@ export function setCursor({ x, y }) { input.moveTo(x, y); }
 export function setPanel(name, size) {
   layout.setPanel(name, size);
   if (!name) inspector.close();
+  clock.wake();
+}
+
+// Nobody has touched the keyboard for a few minutes. Remember where the
+// counters were, so there is something to compare against on the way back.
+let leftAt = null;
+
+/**
+ * The user went away, or came back. Coming back to something worth mentioning
+ * gets one line and nothing else: no badge, no popup, no list to dismiss.
+ */
+export function setAway(on) {
+  if (on) {
+    leftAt = { ...model.totals };
+    return;
+  }
+  if (!leftAt) return;
+  const before = leftAt;
+  leftAt = null;
+  const d = {
+    turns: model.totals.turns - before.turns,
+    failures: model.totals.failures - before.failures,
+    helpers: model.totals.helpers - before.helpers,
+    asked: model.totals.asked - before.asked,
+  };
+  const plural = (n, one, many) => `${n} ${n === 1 ? one : many}`;
+  const parts = [];
+  if (d.turns) parts.push(plural(d.turns, "turn finished", "turns finished"));
+  if (d.failures) parts.push(plural(d.failures, "failure", "failures"));
+  if (d.helpers) parts.push(plural(d.helpers, "helper done", "helpers done"));
+  if (d.asked) parts.push(d.asked === 1 ? "1 ask for you" : `${d.asked} asks for you`);
+  if (!parts.length) return;
+
+  pipMod.welcomeBack();
+  speech.say(`while you were away: ${parts.join(", ")}`, 6);
   clock.wake();
 }
 
@@ -212,10 +248,21 @@ function fitWindow(t) {
 
 let drawnHeight = H;
 
+let worried = "";
+
 function frame(dt, t) {
   const was = model.mood;
   model.refreshMood();
   if (model.mood !== was) inspectChanged();
+
+  // The watchdog caches its own scan; this only notices when the answer changes.
+  const worry = watchdog.current();
+  const now = worry ? worry.key + worry.kind : "";
+  if (now !== worried) {
+    worried = now;
+    if (worry) { pipMod.fret(worry); clock.wake(); }
+    inspectChanged();
+  }
 
   // Low frame rates take several small physics steps, so springs stay stable.
   let rem = dt;

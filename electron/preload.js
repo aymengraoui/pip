@@ -13,6 +13,7 @@ contextBridge.exposeInMainWorld("pip", {
   onCursor: on("cursor"),
   onPanel: on("panel"),
   onDemo: on("demo"),
+  onAway: on("away"),
   setHitRects: (rects) => ipcRenderer.send("hit-rects", rects),
   setWinHeight: (h) => ipcRenderer.send("win-height", h),
   setFocus: (on) => ipcRenderer.send("focus", on),

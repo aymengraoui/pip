@@ -13,6 +13,7 @@ import { textWidth, FONT, W } from "./gfx.js";
 import { host, ui } from "./bridge.js";
 import { AGENT_TOOLS, agents, lead, mood, MOODS, sessions } from "./model.js";
 import { pip, isOver as isOverPip } from "./pip.js";
+import { current as currentWorry } from "./watchdog.js";
 import * as minis from "./minis.js";
 import { mouse } from "./pointer.js";
 
@@ -82,10 +83,14 @@ function buildTexts() {
     else if (lead && lead.tool && lead.state === "working") title = `Running ${lead.tool}`;
     else if (busy) title = "Helpers at work";
   }
+  // Something looks stuck: that outranks whatever it was nominally doing.
+  const worry = currentWorry();
+  if (worry && (mood === "working" || mood === "thinking")) title = "This looks stuck";
   if (n > 1) title += `  ·  ${n} sessions`;
 
   let sub;
   if (mood === "sleeping") sub = n ? "Waiting for you" : "No Claude Code session yet";
+  else if (worry && (mood === "working" || mood === "thinking")) sub = worry.text;
   else sub = [project(lead && lead.cwd), lead && lead.detail].filter(Boolean).join("  —  ") || "Claude Code";
   return { title, sub };
 }

@@ -72,6 +72,7 @@ export default function App() {
         else openPanel("settings");
       }),
       pip.onDemo(() => engine.demo()),
+      pip.onAway((on) => engine.setAway(on)),
     ];
     pip.state().then((s) => { setState(s); engine.setMuted(s.settings.muted); });
     if (new URLSearchParams(location.search).has("debug")) window.__pip = { engine, openPanel, closePanel };
