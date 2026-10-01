@@ -184,10 +184,16 @@ animates towards it:
 
 | when | where |
 | --- | --- |
+| it is the one being inspected | **on stage**: Pip's slot, at Pip's size, while Pip steps aside into the parked line (`pip.aside`, a spring from 0 to 1) |
 | a panel is open | parked in a line on the panel's bottom edge |
 | the notch is open | one per row, standing by its own line |
 | 2+ helpers, notch closed | **the playground**: `minis.roam` picks a spot under the notch every 1.4–3.8 s, on looser springs (k 52 vs 110), with the odd hop; they look where they are walking |
 | otherwise | in a row inside the pill, beside the text |
+
+`stageSlot()` and `parkSlot(i)` in `layout.js` are the two positions involved,
+and both Pip and the featured helper interpolate between them, so the swap is one
+idea rather than two. `minis.at()` scales its hit radius with the creature, or the
+one on stage would be unclickable at the edges.
 
 The playground latches on at two helpers and only lets go when the last one
 finishes (`PLAY_FROM`, and the `playing` flag in `layout.js`), so one of them

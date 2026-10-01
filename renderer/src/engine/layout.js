@@ -14,6 +14,7 @@ import { host, ui } from "./bridge.js";
 import { AGENT_TOOLS, agents, lead, mood, MOODS, sessions } from "./model.js";
 import { pip, isOver as isOverPip } from "./pip.js";
 import { current as currentWorry } from "./watchdog.js";
+import { focusedKey } from "./inspector.js";
 import * as minis from "./minis.js";
 import { mouse } from "./pointer.js";
 
@@ -144,10 +145,14 @@ export function step(dt) {
     ? { x: L.x + L.w.v - 80, y: 13, w: 68, h: 22, pid: lead.pid }
     : null;
 
+  // Inspecting a helper puts that helper on stage and steps Pip aside: the one
+  // you are reading about should be the one you are looking at.
+  const featured = panel && panel.name === "inspect" && agents.has(focusedKey()) ? focusedKey() : "";
+
   publishShape(expanded);
   publishHitRects();
-  placePip();
-  placeMinis(live, expanded);
+  placePip(dt, featured);
+  placeMinis(live, expanded, featured);
 }
 
 /** Tell React where the notch will settle, so its panels can sit inside it. */
@@ -185,28 +190,53 @@ function publishHitRects() {
   host.setHitRects(rects);
 }
 
-function placePip() {
+/** Where the big creature stands: whoever is currently the subject. */
+function stageSlot() {
   const ex = clamp(L.ex.v, 0, 1.2);
-  pip.x = L.x + lerp(30, 40, ex);
-  pip.y = lerp(26, 34, ex) + pip.jump + pip.drop.v;
-  pip.s = lerp(1, 1.3, ex);
+  return { x: L.x + lerp(30, 40, ex), y: lerp(26, 34, ex), s: lerp(1, 1.3, ex) };
 }
 
-function placeMinis(live, expanded) {
+/** The small slot on a panel's bottom edge, where the others wait. */
+function parkSlot(i = 0) {
+  return { x: L.x + L.w.v - 34 - Math.min(i, 9) * 20, y: L.h.v + 9, s: 0.55 };
+}
+
+function placePip(dt, featured) {
+  pip.aside.t = featured ? 1 : 0;
+  const k = clamp(pip.aside.step(dt), 0, 1);
+  const stage = stageSlot(), park = parkSlot(0);
+  pip.x = lerp(stage.x, park.x, k);
+  pip.y = lerp(stage.y, park.y, k) + pip.jump + pip.drop.v;
+  pip.s = lerp(stage.s, park.s, k);
+}
+
+function placeMinis(live, expanded, featured) {
   const start = L.x + 58 + texts.textW + 16;
   const area = {
     x0: L.x + PLAY_SIDE, x1: L.x + L.w.v - PLAY_SIDE,
     y0: L.h.v + PLAY_TOP, y1: L.h.v + PLAY_TOP + PLAY_DEPTH,
   };
+  const stage = stageSlot();
   live.forEach((m, i) => {
     const v = minis.viewOf(m);
+    if (m.key === featured) {
+      // On stage, at Pip's size. It keeps its own wobble: a helper standing in
+      // for Pip should still read as itself.
+      minis.settle(m);
+      v.x.t = stage.x;
+      v.y.t = stage.y;
+      v.sc.t = stage.s;
+      return;
+    }
     if (panel) {
       // A panel fills the notch: the sproutlings line up on its bottom edge,
       // still visible and still clickable.
+      // Pip is parked in the first slot while a helper is on stage.
+      const slot = parkSlot(featured ? i + 1 : i);
       minis.settle(m);
-      v.x.t = L.x + L.w.v - 34 - Math.min(i, 9) * 20;
-      v.y.t = L.h.v + 9;
-      v.sc.t = v.gone || i > 9 ? 0 : 0.55;
+      v.x.t = slot.x;
+      v.y.t = slot.y;
+      v.sc.t = v.gone || i > 9 ? 0 : slot.s;
       return;
     }
     const rowIdx = rows.findIndex((r) => r.kind === "agent" && r.it === m);

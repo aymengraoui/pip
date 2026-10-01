@@ -15,6 +15,7 @@ import { viewOf } from "../renderer/src/engine/minis.js";
 import { L } from "../renderer/src/engine/layout.js";
 import * as watchdog from "../renderer/src/engine/watchdog.js";
 import { review } from "../renderer/src/engine/layout.js";
+import { pip } from "../renderer/src/engine/pip.js";
 
 // -- virtual clock, so 10 minutes of Pip take 20 ms ---------------------------
 
@@ -197,6 +198,21 @@ check("clicking a sproutling asks for the inspector", seen.inspect.length === 1 
 
 engine.setPanel("inspect", { w: 520, h: 420 });
 advance(600);
+
+// The helper being read about takes the stage, and Pip steps aside for it.
+advance(1500);
+const star = viewOf(explore);
+check("the inspected helper takes centre stage", star.sc.t > 1, `scale ${star.sc.t}`);
+check("and stands where Pip stands", Math.abs(star.x.t - (L.x + 40)) < 6, `x ${Math.round(star.x.t)} vs ${Math.round(L.x + 40)}`);
+check("Pip steps aside and shrinks", pip.s < 0.8 && pip.x > L.x + L.w.v - 80, `s ${pip.s.toFixed(2)} x ${Math.round(pip.x)}`);
+
+// Closing the panel gives Pip the stage back.
+engine.setPanel(null);
+advance(2000);
+check("closing it puts Pip back on stage", pip.s > 0.9 && Math.abs(pip.x - (L.x + 30)) < 14, `s ${pip.s.toFixed(2)}`);
+engine.setPanel("inspect", { w: 520, h: 420 });
+engine.focusInspect({ kind: "agent", key: explore.key });
+advance(1200);
 
 let snap = engine.inspectSnapshot();
 check("the snapshot is the agent we clicked", snap && snap.key === explore.key);

@@ -277,11 +277,14 @@ function drawFocusRing(x, y, sc, hue, t) {
 // -- queries ------------------------------------------------------------------
 
 /** The sproutling under a point, if any. */
-export function at(x, y, r = HIT_R) {
+export function at(x, y, r = 0) {
   let hit = null;
   for (const m of agents.values()) {
     const v = viewOf(m);
-    if (v.sc.v > 0.1 && Math.hypot(x - v.x.v, y - v.y.v) < r) hit = m;
+    if (v.sc.v <= 0.1) continue;
+    // Scales with the creature: the one on stage is Pip-sized.
+    const reach = r || Math.max(HIT_R, 13 * v.sc.v + 5);
+    if (Math.hypot(x - v.x.v, y - v.y.v) < reach) hit = m;
   }
   return hit;
 }

@@ -17,7 +17,11 @@ a list, and clicking any of them says exactly what it is doing.
 
 | | |
 | --- | --- |
-| ![The notch, open, listing the session and its subagents](docs/notch-open.png) | ![The inspector panel on one subagent](docs/inspector.png) |
+| ![The notch, open, listing the session and its subagents](docs/notch-open.png) | ![The inspector panel on one subagent, which has taken Pip's place in the notch](docs/inspector.png) |
+
+Whichever helper you're reading about takes the stage: it swaps into the notch at
+Pip's size while Pip steps aside and waits with the others, so the creature you
+are looking at is always the one the panel is talking about.
 
 ![The activity panel on a session waiting for approval](docs/needs-you.png)
 

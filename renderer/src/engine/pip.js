@@ -22,6 +22,8 @@ export const pip = {
   sx: new Spring(1, 260, 12), sy: new Spring(1, 260, 12),
   lookX: new Spring(0, 90, 14), lookY: new Spring(0, 90, 14),
   open: new Spring(1, 500, 30), blush: new Spring(0.35, 60, 12),
+  // 0 = centre stage, 1 = stepped aside so an inspected helper can take it
+  aside: new Spring(0, 150, 18),
   drop: new Spring(0, 90, 9),
   jump: 0, jumpV: 0,
   leafAngle: 0, leafSpin: 0, droop: new Spring(0, 40, 10),
