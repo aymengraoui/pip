@@ -31,7 +31,7 @@ import * as render from "./render.js";
 import * as sound from "./sound.js";
 import * as speech from "./speech.js";
 import * as watchdog from "./watchdog.js";
-import { playDemo } from "./demo.js";
+import * as demoScript from "./demo.js";
 import { fresh } from "./pointer.js";
 import { now } from "./util.js";
 
@@ -48,6 +48,7 @@ export function init(el, host, ui) {
   bridge.configure(host, ui);
   model.setReactions({ onSpawn: minis.onSpawn, onFinish: minis.onFinish, onMood: pipMod.onMood });
   clock.configure({ frame, fps: desiredFps });
+  demoScript.watch((on) => bridge.ui.onDemoState(on));
   input.attach(el);
   pip.intro.t = 1; // grow in
   setTimeout(() => { pipMod.greet(); clock.wake(); }, 500);
@@ -154,7 +155,9 @@ export function inspectLead() {
   return !!target;
 }
 
-export function demo() { playDemo(ingest); }
+export function demo() { demoScript.play(ingest); }
+export function stopDemo() { demoScript.stop(ingest); }
+export const demoRunning = () => demoScript.isRunning();
 
 /** Draws a big, happy Pip for the app icon (build step only). */
 export function drawIcon(el, size = 256) {
@@ -225,7 +228,10 @@ let winH = 128, shrinkSince = 0;
 function fitWindow(t) {
   const base = Math.max(L.h.v, L.h.t);
   let need = base + 16;
-  if (speech.current(t) || layout.hoveredMini) need = Math.max(need, base + 52);
+  // The bubble hangs under whoever is speaking, so it can be well below the notch.
+  if (speech.current(t) || layout.hoveredMini) {
+    need = Math.max(need, base + 52, pip.y + pip.radius() + 48);
+  }
   if (layout.panelName() && model.agents.size) need = Math.max(need, base + 28);
   need = Math.max(need, pip.y + pip.radius() * 1.6);
   need = minis.lowest(need);          // the playground under the notch

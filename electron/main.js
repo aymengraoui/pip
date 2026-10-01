@@ -41,6 +41,7 @@ let userPaused = false;
 let away = false;
 // The process of a session waiting on you, so the tray can offer the jump too.
 let waitingPid = 0;
+let demoRunning = false;
 const timers = {};
 
 const tail = hooks.createTail();
@@ -185,6 +186,7 @@ function updateTray(info = {}) {
     ...(waitingPid ? [{ label: "Review what Claude is asking", click: () => windows.focusProcess(waitingPid) }, { type: "separator" }] : []),
     { label: "Activity", click: () => openPanel("inspect") },
     { label: "Settings", click: () => openPanel("settings") },
+    { label: demoRunning ? "Stop the demo" : "Demo (play every state)", click: () => send("demo") },
     { label: "Pause Pip", type: "checkbox", checked: userPaused, click: (i) => { userPaused = i.checked; applyRunState(); } },
     { label: "Quit Pip", click: () => app.quit() },
   ]));
@@ -238,6 +240,12 @@ ipcMain.on("win-height", (_e, h) => {
   placeNotch();
 });
 ipcMain.on("focus", (_e, on) => setFocusable(!!on));
+ipcMain.on("demo-state", (_e, on) => {
+  const next = !!on;
+  if (next === demoRunning) return;
+  demoRunning = next;
+  updateTray();
+});
 ipcMain.on("waiting", (_e, pid) => {
   const next = Number(pid) || 0;
   if (next === waitingPid) return;
@@ -248,7 +256,7 @@ ipcMain.on("menu", () => {
   Menu.buildFromTemplate([
     { label: "Activity", click: () => send("panel", "inspect") },
     { label: "Settings", click: () => send("panel", "settings") },
-    { label: "Demo (play every state)", click: () => send("demo") },
+    { label: demoRunning ? "Stop the demo" : "Demo (play every state)", click: () => send("demo") },
     { label: "Pause Pip", click: () => { userPaused = true; applyRunState(); } },
     { type: "separator" },
     { label: "Quit Pip", click: () => app.quit() },

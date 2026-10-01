@@ -33,6 +33,15 @@ export function toggle(target) {
   return open(target);
 }
 
+/** The session behind whatever is on stage: what clicking Pip should show. */
+export function ownerTarget() {
+  const focused = agents.get(focusedKey());
+  if (focused) {
+    for (const s of sessions.values()) if (s.sid === focused.sid) return { kind: "session", key: s.key };
+  }
+  return leadTarget();
+}
+
 /** The target that a click on Pip or the pill should show: the loudest session. */
 export function leadTarget() {
   const s = lead || [...sessions.values()].sort((a, b) => b.t - a.t)[0];

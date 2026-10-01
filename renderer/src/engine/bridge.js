@@ -16,6 +16,7 @@ export const host = {
 export const ui = {
   onLayout: noop,     // the notch's shape, so React can sit panels inside it
   onInspect: noop,    // the user clicked a creature or a row: show it, or null to close
+  onDemoState: noop,  // the demo started or finished
 };
 
 export function configure(hostApi, uiApi) {

@@ -24,6 +24,7 @@ export default function App() {
   const [layout, setLayout] = useState({ x: 200, w: 240, h: 48, expanded: false, panel: null });
   const [panel, setPanel] = useState(null);
   const [state, setState] = useState(null);
+  const [demoOn, setDemoOn] = useState(false);
   const announced = useRef(false);
   const panelRef = useRef(null);
   panelRef.current = panel;
@@ -51,7 +52,11 @@ export default function App() {
     engine.init(
       canvasRef.current,
       { setHitRects: pip.setHitRects, setWinHeight: pip.setWinHeight, menu: pip.menu, focusSession: pip.focusSession, setWaiting: pip.setWaiting },
-      { onLayout: setLayout, onInspect: (target) => (target ? openPanel("inspect") : closePanel()) },
+      {
+        onLayout: setLayout,
+        onInspect: (target) => (target ? openPanel("inspect") : closePanel()),
+        onDemoState: (on) => { setDemoOn(on); pip.setDemo(on); },
+      },
     );
     const offs = [
       pip.onEvents((p) => engine.ingest(p)),
@@ -71,7 +76,7 @@ export default function App() {
         if (name === "inspect") { if (!engine.inspectLead()) engine.speak("nothing running yet", 2); }
         else openPanel("settings");
       }),
-      pip.onDemo(() => engine.demo()),
+      pip.onDemo(() => (engine.demoRunning() ? engine.stopDemo() : engine.demo())),
       pip.onAway((on) => engine.setAway(on)),
     ];
     pip.state().then((s) => { setState(s); engine.setMuted(s.settings.muted); });
@@ -92,7 +97,12 @@ export default function App() {
         </div>
         {panel === "settings" && state && (
           <div className="panel-body">
-            <Settings state={state} onDemo={() => { closePanel(); engine.demo(); }} />
+            <Settings
+              state={state}
+              demoOn={demoOn}
+              onDemo={() => { closePanel(); engine.demo(); }}
+              onStopDemo={() => engine.stopDemo()}
+            />
           </div>
         )}
         {panel === "inspect" && (

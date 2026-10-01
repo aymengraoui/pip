@@ -15,7 +15,7 @@ import * as layout from "./layout.js";
 import { say } from "./speech.js";
 import * as minis from "./minis.js";
 import * as inspector from "./inspector.js";
-import { pip, isOver as isOverPip, poke, pet } from "./pip.js";
+import { pip, isAside, isOver as isOverPip, poke, pet } from "./pip.js";
 
 /** Cursor moved: pet Pip if it is being wiggled over, and wake up if it is near. */
 export function moveTo(x, y) {
@@ -27,6 +27,7 @@ export function moveTo(x, y) {
 
 /** Ask React to show (or close) the inspector. */
 function show(target) {
+  if (!target) { ui.onInspect(null); wake(); return; }
   ui.onInspect(inspector.toggle(target));
   wake();
 }
@@ -51,7 +52,15 @@ function onDown(e) {
   const r = layout.review;
   if (r && x >= r.x && x <= r.x + r.w && y >= r.y && y <= r.y + r.h) { review(r.pid); return; }
 
-  if (isOverPip(x, y)) { poke(); wake(); return; }
+  if (isOverPip(x, y)) {
+    // Stepped aside while a helper is on stage: clicking Pip means "back to
+    // you", not "tickle me". It gets the stage back and the panel shows its
+    // session.
+    if (isAside()) { show(inspector.ownerTarget()); return; }
+    poke();
+    wake();
+    return;
+  }
 
   const mini = minis.at(x, y);
   if (mini) { show({ kind: "agent", key: mini.key }); return; }

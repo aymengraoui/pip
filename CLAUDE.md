@@ -190,6 +190,11 @@ animates towards it:
 | 2+ helpers, notch closed | **the playground**: `minis.roam` picks a spot under the notch every 1.4–3.8 s, on looser springs (k 52 vs 110), with the odd hop; they look where they are walking |
 | otherwise | in a row inside the pill, beside the text |
 
+The speech bubble hangs under whoever is speaking (`render.drawBubble`), not off
+the notch, because Pip moves now. The exception is an open panel: that is DOM
+drawn over this canvas, so a bubble up there would be invisible and it drops
+below the notch instead.
+
 `stageSlot()` and `parkSlot(i)` in `layout.js` are the two positions involved,
 and both Pip and the featured helper interpolate between them, so the swap is one
 idea rather than two. `minis.at()` scales its hit radius with the creature, or the
@@ -265,7 +270,8 @@ add `--focus` to actually raise it.
 
 | target | what happens | where |
 | --- | --- | --- |
-| Pip | tickle; 5 pokes → dizzy; wakes it from a nap | `pip.poke` |
+| Pip, on stage | tickle; 5 pokes → dizzy; wakes it from a nap | `pip.poke` |
+| Pip, stepped aside | back to its own view: the panel shows that session and Pip retakes the stage | `pip.isAside` → `inspector.ownerTarget` |
 | a sproutling | open the inspector on that subagent, click again to close | `input.js` → `inspector.toggle` → `ui.onInspect` → `App.openPanel("inspect")` |
 | a row (notch open) | same, for that session or agent | `layout.rowAt` / `rowTarget` |
 | the pill | pin the notch open | `layout.togglePinned` |
@@ -358,7 +364,10 @@ happens once.
   audio context, then feeds a whole session, clicks a sproutling, opens the
   inspector, pauses, replays, and runs the demo — ~30 checks, no window.
 - **Anything visual** → `npm start`, then Settings → **Demo**: a scripted tour of
-  every state with three sproutlings (`engine/demo.js`).
+  every state with three sproutlings (`engine/demo.js`). It runs at `PACE` times
+  the scripted speed because it is meant to be watched, and **Stop demo** (in
+  Settings, the tray and the right-click menu) cuts it short and ends its session
+  so nothing is left sitting in the notch.
 - **New hook field** → add it in `resources/hook.js` *and* read it defensively.
 - **New mood** → `MOODS` in `model.js` (accent + label + priority), a face in
   `pip.face`, and a reaction in `pip.onMood`.

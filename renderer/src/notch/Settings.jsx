@@ -27,7 +27,7 @@ function updateHint(u) {
   }
 }
 
-export default function Settings({ state, onDemo }) {
+export default function Settings({ state, demoOn, onDemo, onStopDemo }) {
   const s = state.settings;
   const u = state.update || { status: "idle", current: state.version };
   const [games, setGames] = useState(s.gameMode.extraExes.join(", "));
@@ -112,7 +112,9 @@ export default function Settings({ state, onDemo }) {
       <div className="s-footer">
         <span className="hint">Pip v{state.version}</span>
         <div className="s-actions">
-          <button className="btn" onClick={onDemo}>Demo</button>
+          {demoOn
+            ? <button className="btn" onClick={onStopDemo}>Stop demo</button>
+            : <button className="btn" onClick={onDemo}>Demo</button>}
           <button className="btn" onClick={() => pip.quit()}>Quit Pip</button>
         </div>
       </div>

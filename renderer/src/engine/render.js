@@ -179,19 +179,29 @@ function drawAgentRow(m, y, right) {
   ctx.fillText(fit(doing + tag, right - (L.x + 56 + nw)), L.x + 56 + nw, y);
 }
 
-/** Pip's speech, or a label for the sproutling under the cursor. */
+/**
+ * Pip's speech, or a label for the sproutling under the cursor.
+ *
+ * It hangs off whoever is speaking rather than off the notch, which matters now
+ * that Pip moves: it steps aside when a helper is on stage, and it leaps out of
+ * the notch when something finishes. The one exception is a panel being open —
+ * the panel is DOM, drawn over this canvas, so a bubble up there would simply be
+ * invisible. In that case it drops below the notch where it can be seen.
+ */
 export function drawBubble(t) {
-  let text = null, x = pip.x, t0 = 0, until = 0;
+  let text = null, t0 = 0, until = 0;
+  let speaker = { x: pip.x, y: pip.y, r: pip.radius() };
   const bubble = currentBubble(t);
   if (bubble) ({ text, t0, until } = bubble);
   if (hoveredMini) {
     const m = hoveredMini;
     text = `${m.type}: ${m.state === "done" ? "done!" : m.tool || m.desc || "working"} · click for details`;
-    x = m.view.x.v;
+    speaker = { x: m.view.x.v, y: m.view.y.v, r: 13 * m.view.sc.v };
     t0 = t - 1;
     until = t + 1;
   }
   if (!text) return;
+  const x = speaker.x;
 
   const k = clamp((t - t0) / 0.18, 0, 1);
   const fade = clamp((until - t) / 0.25, 0, 1);
@@ -199,7 +209,8 @@ export function drawBubble(t) {
   ctx.font = `600 12px ${FONT}`;
   const label = fit(text, 300);
   const bw = ctx.measureText(label).width + 18, bh = 24;
-  const by = L.h.v + 10;
+  const under = speaker.y + speaker.r + 12;
+  const by = panelName() ? Math.max(under, L.h.v + 10) : under;
   const bx = clamp(x - bw / 2, 6, W - bw - 6);
 
   ctx.save();

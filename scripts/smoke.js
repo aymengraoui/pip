@@ -105,7 +105,7 @@ function check(name, ok, extra = "") {
 stubTimers();
 stubWindow();
 
-const seen = { hitRects: 0, winHeight: 0, layout: 0, inspect: [], menu: 0, focused: [], waiting: [] };
+const seen = { hitRects: 0, winHeight: 0, layout: 0, inspect: [], menu: 0, focused: [], waiting: [], demo: [] };
 const canvas = stubCanvas();
 
 engine.init(canvas, {
@@ -117,6 +117,7 @@ engine.init(canvas, {
 }, {
   onLayout: () => seen.layout++,
   onInspect: (target) => seen.inspect.push(target),
+  onDemoState: (on) => seen.demo.push(on),
 });
 
 // Long enough for the hello bubble to come and go, so the window has both grown
@@ -205,6 +206,16 @@ const star = viewOf(explore);
 check("the inspected helper takes centre stage", star.sc.t > 1, `scale ${star.sc.t}`);
 check("and stands where Pip stands", Math.abs(star.x.t - (L.x + 40)) < 6, `x ${Math.round(star.x.t)} vs ${Math.round(L.x + 40)}`);
 check("Pip steps aside and shrinks", pip.s < 0.8 && pip.x > L.x + L.w.v - 80, `s ${pip.s.toFixed(2)} x ${Math.round(pip.x)}`);
+
+// Parked Pip is a way back to its own view, not a tickle target.
+const beforeClick = seen.inspect.length;
+canvas.fire("mousedown", { button: 0, clientX: pip.x, clientY: pip.y });
+advance(400);
+const backToPip = seen.inspect[seen.inspect.length - 1];
+check("clicking parked Pip shows its own session", seen.inspect.length > beforeClick && backToPip && backToPip.kind === "session", JSON.stringify(backToPip));
+check("and Pip comes back to the stage", pip.aside.t === 0);
+engine.focusInspect({ kind: "agent", key: explore.key });
+advance(1200);
 
 // Closing the panel gives Pip the stage back.
 engine.setPanel(null);
@@ -388,9 +399,21 @@ advance(500);
 check("resuming draws again", framesRun > stopped);
 
 feed([{ ev: "SessionEnd" }]);
+
+// The demo: it announces itself, it can be cut short, and it clears up after.
 engine.demo();
-advance(40000);
-check("the demo ran clean", true);
+advance(4000);
+check("the demo says it started", seen.demo[seen.demo.length - 1] === true);
+check("and it put something on screen", sessions.size > 0 || agents.size > 0);
+engine.stopDemo();
+advance(3000);
+check("stopping it says so", seen.demo[seen.demo.length - 1] === false);
+check("and leaves nothing behind", agents.size === 0, `${agents.size} helpers left`);
+
+engine.demo();
+advance(120000);
+check("left alone it finishes by itself", seen.demo[seen.demo.length - 1] === false);
+check("the demo ran clean", agents.size === 0);
 
 engine.speak("hello", 1);
 engine.setMuted(true);

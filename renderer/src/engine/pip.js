@@ -43,6 +43,9 @@ export const pip = {
   radius() { return BASE_R * this.s; },
 };
 
+/** Has Pip stepped aside to let an inspected helper have the stage? */
+export const isAside = () => pip.aside.v > 0.4;
+
 /** Is the cursor on Pip (with a little slack, since it is small)? */
 export const isOver = (x, y, slack = 4) => Math.hypot(x - pip.x, y - pip.y) < 18 * pip.s + slack;
 
