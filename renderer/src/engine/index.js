@@ -249,6 +249,7 @@ function fitWindow(t) {
 let drawnHeight = H;
 
 let worried = "";
+let lastWaiting = -1;
 
 function frame(dt, t) {
   const was = model.mood;
@@ -256,6 +257,13 @@ function frame(dt, t) {
   if (model.mood !== was) inspectChanged();
 
   // The watchdog caches its own scan; this only notices when the answer changes.
+  // Let the tray know whether anything is waiting on the user.
+  const waiting = model.mood === "approval" && model.lead ? model.lead.pid || 0 : 0;
+  if (waiting !== lastWaiting) {
+    lastWaiting = waiting;
+    bridge.host.setWaiting(waiting);
+  }
+
   const worry = watchdog.current();
   const now = worry ? worry.key + worry.kind : "";
   if (now !== worried) {

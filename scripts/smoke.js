@@ -14,6 +14,7 @@ import { agents, sessions, history } from "../renderer/src/engine/model.js";
 import { viewOf } from "../renderer/src/engine/minis.js";
 import { L } from "../renderer/src/engine/layout.js";
 import * as watchdog from "../renderer/src/engine/watchdog.js";
+import { review } from "../renderer/src/engine/layout.js";
 
 // -- virtual clock, so 10 minutes of Pip take 20 ms ---------------------------
 
@@ -103,13 +104,15 @@ function check(name, ok, extra = "") {
 stubTimers();
 stubWindow();
 
-const seen = { hitRects: 0, winHeight: 0, layout: 0, inspect: [], menu: 0 };
+const seen = { hitRects: 0, winHeight: 0, layout: 0, inspect: [], menu: 0, focused: [], waiting: [] };
 const canvas = stubCanvas();
 
 engine.init(canvas, {
   setHitRects: () => seen.hitRects++,
   setWinHeight: () => seen.winHeight++,
   menu: () => seen.menu++,
+  focusSession: (pid) => { seen.focused.push(pid); return { ok: true, how: "focused" }; },
+  setWaiting: (pid) => seen.waiting.push(pid),
 }, {
   onLayout: () => seen.layout++,
   onInspect: (target) => seen.inspect.push(target),
@@ -161,9 +164,15 @@ check("and keep moving around", crew.some((m, i) => Math.abs(viewOf(m).x.t - spo
 // Where they go comes from what they are doing, not from a dice roll.
 feed([{ ev: "PreToolUse", aid: "a1", tool: "Grep", detail: "same" }]);
 feed([{ ev: "PreToolUse", aid: "a2", tool: "Grep", detail: "same" }]);
-advance(9000);
-const apart = Math.hypot(viewOf(crew[0]).x.t - viewOf(crew[1]).x.t, viewOf(crew[0]).y.t - viewOf(crew[1]).y.t);
-check("two helpers on the same tool huddle", apart < 90, `${Math.round(apart)} px apart`);
+// Where they wander is chance; that they keep ending up together is not. Sample
+// the gap over a while and take the closest they got, or this test flaps.
+let closest = Infinity;
+for (let i = 0; i < 12; i++) {
+  advance(1000);
+  const a = viewOf(crew[0]), b = viewOf(crew[1]);
+  closest = Math.min(closest, Math.hypot(a.x.t - b.x.t, a.y.t - b.y.t));
+}
+check("two helpers on the same tool keep ending up together", closest < 60, `closest was ${Math.round(closest)} px`);
 
 // A failure keeps one of them low and still.
 feed([{ ev: "PostToolUseFailure", aid: "a1", tool: "Grep", res: "error: no matches" }]);
@@ -305,9 +314,20 @@ advance(200);
 
 // -- the rest of the lifecycle ------------------------------------------------
 
+const lastInspect = seen.inspect.length;
 feed([{ ev: "PermissionRequest", tool: "Bash", detail: "npm install" }]);
 advance(600);
 check("a permission prompt reaches Pip", engine.frameStats().mood === "approval");
+
+// Waiting on you: the notch offers the way to the terminal, and the tray hears.
+const chip = review;
+check("the notch offers Review while Claude waits", !!chip, JSON.stringify(chip));
+check("the tray is told who is waiting", seen.waiting.includes(4242), JSON.stringify(seen.waiting));
+if (chip) {
+  canvas.fire("mousedown", { button: 0, clientX: chip.x + chip.w / 2, clientY: chip.y + chip.h / 2 });
+  check("clicking Review raises that terminal", seen.focused.includes(4242), JSON.stringify(seen.focused));
+  check("and it does not tickle Pip instead", seen.inspect.length === lastInspect);
+}
 
 feed([{ ev: "PreToolUse", tool: "Bash", detail: "npm install" }, { ev: "PostToolUseFailure", tool: "Bash", res: "error: exit 1" }]);
 advance(300);

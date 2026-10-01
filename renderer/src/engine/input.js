@@ -12,6 +12,7 @@ import { wake } from "./clock.js";
 import { host, ui } from "./bridge.js";
 import { isMuted } from "./sound.js";
 import * as layout from "./layout.js";
+import { say } from "./speech.js";
 import * as minis from "./minis.js";
 import * as inspector from "./inspector.js";
 import { pip, isOver as isOverPip, poke, pet } from "./pip.js";
@@ -30,9 +31,25 @@ function show(target) {
   wake();
 }
 
+/** Take me to the terminal that is asking. */
+function review(pid) {
+  wake();
+  Promise.resolve(host.focusSession(pid))
+    .then((r) => {
+      if (!r) return;
+      if (r.how === "flashed") say("it's blinking in your taskbar", 3);
+      else if (!r.ok) say(r.reason || "couldn't find that terminal", 3);
+    })
+    .catch(() => {});
+}
+
 function onDown(e) {
   if (e.button !== 0) return;
   const x = e.clientX, y = e.clientY;
+
+  // Claude is waiting and the notch is offering the way there.
+  const r = layout.review;
+  if (r && x >= r.x && x <= r.x + r.w && y >= r.y && y <= r.y + r.h) { review(r.pid); return; }
 
   if (isOverPip(x, y)) { poke(); wake(); return; }
 

@@ -7,7 +7,7 @@
 import { clamp, easeOutBack, lerp, project } from "./util.js";
 import { ctx, ellipse, fit, FONT, W } from "./gfx.js";
 import { agents, mood, MOODS } from "./model.js";
-import { L, ROW_H, ROW_TOP, hoveredMini, hoveredRow, isPlaying, panelName, rows, texts } from "./layout.js";
+import { L, ROW_H, ROW_TOP, hoveredMini, hoveredRow, isPlaying, panelName, review, rows, texts } from "./layout.js";
 import { pip } from "./pip.js";
 import { current as currentBubble } from "./speech.js";
 
@@ -66,6 +66,28 @@ export function drawHeader(t) {
   ctx.fillStyle = SUB;
   ctx.font = `11px ${FONT}`;
   ctx.fillText(fit(texts.sub, maxW), tx, lerp(38, 45, ex));
+
+  // "Review" while Claude is waiting: one click to the terminal that is asking.
+  if (review) {
+    const r = review;
+    const accent = MOODS.approval.accent;
+    ctx.save();
+    ctx.globalAlpha = 1 - ex * 2;
+    ctx.beginPath();
+    ctx.roundRect(r.x, r.y, r.w, r.h, 11);
+    ctx.fillStyle = "rgba(255,159,10,0.14)";
+    ctx.fill();
+    ctx.strokeStyle = accent;
+    ctx.lineWidth = 1;
+    ctx.stroke();
+    ctx.fillStyle = accent;
+    ctx.font = `600 11px ${FONT}`;
+    ctx.textAlign = "center";
+    ctx.fillText("Review →", r.x + r.w / 2, r.y + 15);
+    ctx.textAlign = "left";
+    ctx.restore();
+    return; // the dot would only crowd it
+  }
 
   // Status dot, compact only: when open, buttons live there instead.
   if (ex < 0.6) {

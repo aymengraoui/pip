@@ -9,6 +9,8 @@ export const host = {
   setHitRects: noop,  // which parts of the window take clicks
   setWinHeight: noop, // how tall the window needs to be right now
   menu: noop,         // right click: native context menu
+  focusSession: noop, // raise the terminal a session is running in
+  setWaiting: noop,   // which process is waiting on the user, or 0
 };
 
 export const ui = {

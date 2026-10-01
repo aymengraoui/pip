@@ -14,9 +14,12 @@ it is doing.
 | --- | --- |
 | ![The notch, open, listing the session and its subagents](docs/notch-open.png) | ![The inspector panel on one subagent](docs/inspector.png) |
 
-When Claude needs you, Pip says what for and offers the way back:
+When Claude needs you, Pip says what for and offers one click to the terminal
+that is asking — the decision stays where you can read the whole command:
 
-![Pip showing a pending permission request with a Go to terminal button](docs/needs-you.png)
+![The notch showing a permission request with a Review button](docs/review.png)
+
+![The activity panel on a session waiting for approval](docs/needs-you.png)
 
 ## Build & run
 
@@ -57,9 +60,11 @@ Installed to `%LOCALAPPDATA%\Programs\pip\Pip.exe`. Data lives in `%APPDATA%\Pip
   so nothing scrolls, and it never takes focus, so your terminal stays active.
   Click the same sproutling again, or the ×, to close it. Also on the tray menu
   as **Activity**.
-- **Go to terminal.** When Claude is waiting on you, the panel says so and puts
-  the button right there: click it and the terminal that session is running in
-  comes to the front. Pip knows which process Claude Code is because the hook
+- **Review.** When Claude is waiting on you the notch says what for and shows a
+  **Review →** button: one click and the terminal that is asking comes to the
+  front, where you can read the whole command and answer it. It's on the tray
+  menu too, and in the activity panel as **Go to terminal**. Pip never answers a
+  prompt for you — it only takes you to it. Pip knows which process Claude Code is because the hook
   relay records its own parent, and it walks up from there to whatever window is
   hosting it — Windows Terminal, a VS Code shell, plain conhost. Windows doesn't
   always let a background app steal focus; when it refuses, Pip makes the

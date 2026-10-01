@@ -50,7 +50,7 @@ export default function App() {
   useEffect(() => {
     engine.init(
       canvasRef.current,
-      { setHitRects: pip.setHitRects, setWinHeight: pip.setWinHeight, menu: pip.menu },
+      { setHitRects: pip.setHitRects, setWinHeight: pip.setWinHeight, menu: pip.menu, focusSession: pip.focusSession, setWaiting: pip.setWaiting },
       { onLayout: setLayout, onInspect: (target) => (target ? openPanel("inspect") : closePanel()) },
     );
     const offs = [

@@ -1,5 +1,9 @@
 # Pip 1.4.0 — plan
 
+> **Status.** #2, #3 and #4 are built. #1 was deliberately **not** built: see the
+> note under it. What shipped instead is a Review button that jumps to the
+> terminal, which needs no hook changes at all.
+
 Four features, one release. They share a theme: Pip stops being a thing that
 reports and becomes a thing that participates. Ordered by what I'd build first.
 
@@ -36,7 +40,22 @@ Source: https://code.claude.com/docs/en/hooks
 
 ---
 
-## 1. Answer from the notch
+## 1. Answer from the notch — NOT BUILT, by choice
+
+**What shipped instead:** a **Review →** button on the notch (and the tray, and
+the panel) that raises the terminal that is asking. One click to the decision,
+with the decision still made where the whole command is visible.
+
+**Why.** Writing the decision path into `resources/hook.js` means a background
+desktop app can answer Claude Code permission prompts — the main guardrail
+between a tool call and the machine. The mitigations below are real, but they
+do not change what the capability is: the decision moves from a terminal where
+you read the command to a button on a notch. An automated safety check refused
+the edit, and that was the right call. The design below is kept because it is
+sound and might be wanted deliberately one day, behind an explicit decision
+rather than as a convenience.
+
+## 1. (design kept for reference) Answer from the notch
 
 **What.** A permission prompt appears in the notch with **Allow** and **Deny**.
 Click, and Claude carries on. You never go to the terminal.

@@ -17,6 +17,7 @@ contextBridge.exposeInMainWorld("pip", {
   setHitRects: (rects) => ipcRenderer.send("hit-rects", rects),
   setWinHeight: (h) => ipcRenderer.send("win-height", h),
   setFocus: (on) => ipcRenderer.send("focus", on),
+  setWaiting: (pid) => ipcRenderer.send("waiting", pid),
   menu: () => ipcRenderer.send("menu"),
   quit: () => ipcRenderer.send("quit"),
 

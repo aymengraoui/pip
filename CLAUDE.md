@@ -194,6 +194,16 @@ finishes (`PLAY_FROM`, and the `playing` flag in `layout.js`), so one of them
 ending doesn't yank the rest back inside. While it is on, the pill stops
 reserving width for them and the "+n" badge is hidden — they are all on screen.
 
+## Pip never answers a prompt
+
+The relay can, technically: a `PermissionRequest` hook decides by printing JSON,
+and `docs/ROADMAP.md` has a worked design for doing it from the notch. It is
+deliberately not built. Pip takes you to the decision instead of making it, so
+the one irreversible action in the loop stays where the full command is on
+screen. If that ever changes it should be a decision somebody makes on purpose,
+not a convenience that creeps in — the relay's "never print to stdout" rule is
+load-bearing.
+
 ## Noticing things
 
 `engine/watchdog.js` reads the activity logs the model already keeps and applies
@@ -255,6 +265,7 @@ add `--focus` to actually raise it.
 | the pill | pin the notch open | `layout.togglePinned` |
 | right click | native menu from the main process | `bridge.host.menu` |
 | Go to terminal (in the panel) | raise the terminal that session runs in | `windows.focusProcess` |
+| Review → (on the notch, while waiting) | the same, one click from anywhere | `layout.review` + `input.js` |
 | gear, tray, 2nd instance | Settings | `send("panel", …)` |
 | tray → Activity | inspector on the busiest session | `engine.inspectLead` |
 

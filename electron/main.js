@@ -39,6 +39,8 @@ let focusable = false;
 let gaming = false;
 let userPaused = false;
 let away = false;
+// The process of a session waiting on you, so the tray can offer the jump too.
+let waitingPid = 0;
 const timers = {};
 
 const tail = hooks.createTail();
@@ -180,6 +182,7 @@ function updateTray(info = {}) {
     ...(update.status === "ready"
       ? [{ label: `Restart to update to ${update.version}`, click: () => updater.install() }, { type: "separator" }]
       : []),
+    ...(waitingPid ? [{ label: "Review what Claude is asking", click: () => windows.focusProcess(waitingPid) }, { type: "separator" }] : []),
     { label: "Activity", click: () => openPanel("inspect") },
     { label: "Settings", click: () => openPanel("settings") },
     { label: "Pause Pip", type: "checkbox", checked: userPaused, click: (i) => { userPaused = i.checked; applyRunState(); } },
@@ -235,6 +238,12 @@ ipcMain.on("win-height", (_e, h) => {
   placeNotch();
 });
 ipcMain.on("focus", (_e, on) => setFocusable(!!on));
+ipcMain.on("waiting", (_e, pid) => {
+  const next = Number(pid) || 0;
+  if (next === waitingPid) return;
+  waitingPid = next;
+  updateTray();
+});
 ipcMain.on("menu", () => {
   Menu.buildFromTemplate([
     { label: "Activity", click: () => send("panel", "inspect") },

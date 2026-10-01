@@ -42,6 +42,8 @@ export let rows = [];
 export let texts = { title: "", sub: "", textW: 0 };
 export let hoveredMini = null;
 export let hoveredRow = -1;
+// Where "Review" sits while Claude is waiting on you, or null.
+export let review = null;
 
 let lastLayoutKey = "", lastHitKey = "";
 
@@ -119,7 +121,10 @@ export function step(dt) {
   const shown = Math.min(live.length, COMPACT_MINIS);
   // Playing helpers are under the notch, so the pill doesn't reserve room.
   const minisW = playing || !shown ? 0 : shown * 22 + (live.length > COMPACT_MINIS ? 24 : 0) + 4;
-  const compactW = clamp(58 + texts.textW + 16 + minisW + 22, 230, 580);
+  // Claude is waiting: the notch carries a way straight to the terminal, and
+  // has to be wide enough to hold it.
+  const asking = mood === "approval" && lead && lead.pid;
+  const compactW = clamp(58 + texts.textW + 16 + minisW + (asking ? 86 : 22), 230, 580);
   rows = buildRows();
 
   const expanded = isExpanded();
@@ -133,6 +138,11 @@ export function step(dt) {
   }
   L.ex.step(dt); L.w.step(dt); L.h.step(dt);
   L.x = (W - L.w.v) / 2;
+
+  // Compact only: once the notch is open, the rows and the panel say it better.
+  review = asking && !panel && L.ex.v < 0.5
+    ? { x: L.x + L.w.v - 80, y: 13, w: 68, h: 22, pid: lead.pid }
+    : null;
 
   publishShape(expanded);
   publishHitRects();
