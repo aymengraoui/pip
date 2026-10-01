@@ -257,6 +257,14 @@ calls `engine.resizePanel(height)`, so the notch grows to the content instead
 "+n earlier". If you add anything to that panel, keep it inside that budget
 rather than reaching for `overflow: auto`.
 
+## What is planned next
+
+`docs/ROADMAP.md` holds the plan for 1.4.0: answering permission prompts from
+the notch, stuck detection, a data-driven playground, and a "while you were
+away" digest. Read it before starting any of them — the first one inverts the
+relay's never-print-to-stdout rule on purpose, and the conditions under which
+that is safe are written down there, not inferable from the code.
+
 ## Releasing, and how updates reach people
 
 A release is a tag. `.github/workflows/release.yml` does the rest on
