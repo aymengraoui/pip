@@ -4,7 +4,7 @@
 // Pip and the sproutlings draw themselves (pip.js, minis.js); this is the
 // furniture around them.
 
-import { ago, clamp, easeOutBack, lerp, project } from "./util.js";
+import { clamp, easeOutBack, lerp, project } from "./util.js";
 import { ctx, ellipse, fit, FONT, W } from "./gfx.js";
 import { agents, mood, MOODS } from "./model.js";
 import { L, ROW_H, ROW_TOP, hoveredMini, hoveredRow, isPlaying, panelName, rows, texts } from "./layout.js";
@@ -12,7 +12,6 @@ import { pip } from "./pip.js";
 import { current as currentBubble } from "./speech.js";
 
 const SUB = "#9C9CA8";
-const FAINT = "#6E6E7A";
 
 export function drawPill(t) {
   const x = L.x, w = L.w.v, h = L.h.v, r = Math.min(20, h / 2), e = 10;
@@ -138,11 +137,7 @@ function drawSessionRow(s, y, right) {
   let what = MOODS[s.state].label;
   if (s.state === "working" && s.tool) what = s.tool;
   const extra = s.detail && s.state !== "finished" ? ` · ${s.detail}` : "";
-  ctx.fillText(fit(what + extra, right - (L.x + 56 + nw) - 36), L.x + 56 + nw, y);
-
-  ctx.textAlign = "right";
-  ctx.fillStyle = FAINT;
-  ctx.fillText(ago(s.t), right, y);
+  ctx.fillText(fit(what + extra, right - (L.x + 56 + nw)), L.x + 56 + nw, y);
 }
 
 function drawAgentRow(m, y, right) {
@@ -159,11 +154,7 @@ function drawAgentRow(m, y, right) {
     : m.tool ? `${m.tool}${m.toolDetail ? " " + m.toolDetail : ""}`
     : m.desc || "working";
   const tag = m.bg ? " · background" : "";
-  ctx.fillText(fit(doing + tag, right - (L.x + 56 + nw) - 36), L.x + 56 + nw, y);
-
-  ctx.textAlign = "right";
-  ctx.fillStyle = FAINT;
-  ctx.fillText(ago(m.t), right, y);
+  ctx.fillText(fit(doing + tag, right - (L.x + 56 + nw)), L.x + 56 + nw, y);
 }
 
 /** Pip's speech, or a label for the sproutling under the cursor. */

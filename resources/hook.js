@@ -7,6 +7,7 @@ const fs = require("fs");
 const path = require("path");
 
 const LOG = path.join(__dirname, "events.jsonl");
+const SETTINGS = path.join(__dirname, "settings.json");
 const MAX_BYTES = 512 * 1024;
 const KEEP_LINES = 300;
 const AGENT_TOOLS = new Set(["Agent", "Task"]);
@@ -24,6 +25,15 @@ function summarize(input) {
     input.description || input.command || (p && path.basename(p)) ||
     input.pattern || input.url || input.query || input.prompt || ""
   , 80);
+}
+
+/** Pip's own settings sit next to this file. Absent or broken means defaults. */
+function recordResults() {
+  try {
+    return JSON.parse(fs.readFileSync(SETTINGS, "utf8")).recordResults !== false;
+  } catch {
+    return true;
+  }
 }
 
 /**
@@ -68,7 +78,7 @@ process.stdin.on("end", () => {
       msg: clip(e.message || e.prompt || ""),
       ntype: e.notification_type || "",
       // How the tool call turned out, so Pip can show it without the terminal.
-      res: outcome(e),
+      res: recordResults() ? outcome(e) : "",
       // Set when the event fires inside a subagent, and on SubagentStart/Stop.
       aid: e.agent_id || "",
       atype: e.agent_type || (spawnsAgent ? input.subagent_type || "general-purpose" : ""),

@@ -173,7 +173,7 @@ advance(600);
 let snap = engine.inspectSnapshot();
 check("the snapshot is the agent we clicked", snap && snap.key === explore.key);
 check("it says what is running now", snap && snap.doing && snap.doing.tool === "Grep", snap && JSON.stringify(snap.doing));
-check("the running tool is being timed", snap && snap.doing.ms >= 0);
+check("the headline carries the detail, not a clock", snap && snap.doing.text === "theme" && snap.doing.ms === undefined);
 check("the activity log has entries", snap && snap.log.length >= 2, snap && String(snap.log.length));
 check("the log is newest first", snap && snap.log[0].t >= snap.log[snap.log.length - 1].t);
 check("peers are offered", snap && snap.peers.length >= 2);
@@ -218,10 +218,29 @@ two = engine.inspectSnapshot();
 check("closing one leaves its sibling running", two.doing.tool === "Bash" && two.alsoRunning === 0, JSON.stringify(two.doing));
 const read = two.log.find((e) => e.tool === "Read");
 check("a closed call is timed by the events, not by us", read && read.ms === 1000, read && String(read.ms));
-check("entries keep the event's own time", read && read.ago > 15000, read && String(read.ago));
+check("entries keep the event's own time", read && read.t === back + 2000, read && String(read.t - back));
+const stillGoing = two.log.find((e) => e.running);
+check("a running call carries no ticking number", two.doing && two.doing.ms === undefined && stillGoing && stillGoing.ms === 0, JSON.stringify(stillGoing));
 feed2([{ ev: "SessionEnd" }]);
 engine.closeInspector();
 advance(200);
+
+// -- the inspector is pushed to, not polled -----------------------------------
+
+let pokes = 0;
+const unsubscribe = engine.subscribeInspect(() => pokes++);
+engine.focusInspect({ kind: "session", key: session.key });
+const atFocus = pokes;
+check("focusing something notifies the panel", atFocus > 0);
+advance(2000);
+check("idle frames notify nobody", pokes === atFocus, `${pokes - atFocus} spurious updates`);
+feed([{ ev: "PreToolUse", tool: "Read", detail: "quiet.js" }]);
+check("a hook event notifies the panel", pokes > atFocus);
+unsubscribe();
+const afterOff = pokes;
+feed([{ ev: "PostToolUse", tool: "Read" }]);
+check("unsubscribing stops it", pokes === afterOff);
+engine.closeInspector();
 
 // -- the rest of the lifecycle ------------------------------------------------
 

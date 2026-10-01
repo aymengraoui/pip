@@ -90,12 +90,11 @@ button { font: inherit; }
 .insp-now b { font-weight: 650; flex: none; }
 .insp-more { color: var(--faint); font-size: 10.5px; flex: none; }
 .insp-detail { color: var(--muted); min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.insp-ms { margin-left: auto; color: var(--faint); font-size: 11px; white-space: nowrap; flex: none; }
+.insp-ms { margin-left: auto; color: var(--faint); font-size: 11px; white-space: nowrap; flex: none; display: flex; align-items: center; gap: 5px; }
 .insp-now .insp-ms { color: var(--mint); }
 
 .pulse { width: 6px; height: 6px; border-radius: 50%; background: var(--mint); flex: none; animation: pulse 1.1s ease-in-out infinite; }
 @keyframes pulse { 0%, 100% { opacity: 0.35; transform: scale(0.8); } 50% { opacity: 1; transform: scale(1.15); } }
-.running { color: var(--mint); }
 
 .insp-stats { display: flex; gap: 12px; flex: none; color: var(--faint); font-size: 11px; flex-wrap: wrap; }
 .insp-label { flex: none; color: var(--faint); font-size: 10.5px; text-transform: uppercase; letter-spacing: 0.06em; }
@@ -106,8 +105,8 @@ button { font: inherit; }
 .insp-earlier { color: var(--faint); font-size: 11px; padding: 6px 2px 0; }
 
 .insp-row { display: flex; gap: 8px; padding: 5px 2px; border-bottom: 1px solid #1B1B22; min-width: 0; }
+.insp-row.live { background: rgba(157, 235, 203, 0.05); }
 .insp-row.failed { background: rgba(255, 90, 78, 0.06); }
-.insp-when { width: 58px; flex: none; color: var(--faint); font-size: 11px; }
 .insp-what { flex: 1; min-width: 0; display: flex; flex-wrap: wrap; gap: 6px; align-items: baseline; }
 .insp-what b { font-weight: 650; }
 .insp-kind { color: var(--muted); }

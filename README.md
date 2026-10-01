@@ -68,6 +68,21 @@ Installed to `%LOCALAPPDATA%\Programs\pip\Pip.exe`. Data lives in `%APPDATA%\Pip
   those builds shipped before any of this existed.)
 - Click Pip to tickle, wiggle the mouse over it to pet, poke it five times for dizzy.
 
+## What Pip keeps
+
+Everything stays on your machine, in `%APPDATA%\Pip`:
+
+- `events.jsonl` — one line per Claude Code hook event: the session, the working
+  directory, the tool, a clipped description, and (unless you turn **Record tool
+  results** off in Settings) a clipped line about how the call went, so the
+  activity panel can show a failure without you opening the terminal. Capped at
+  100 characters per result, 512 KB, and trimmed to the last 300 lines.
+- `settings.json` and `hook.js`.
+
+Nothing is sent anywhere. The only network request Pip ever makes is the update
+check against this repo's GitHub releases, and that one stops while a game is
+running.
+
 ## CPU
 
 - **Game mode**: when a game (exclusive fullscreen, a Steam/Epic/Riot/Xbox/GOG/EA/Ubisoft/Battle.net install, or one of your extra games) or any fullscreen app is in front, Pip hides and stops animation, sound, cursor tracking and event tailing. Only a ~0.5 ms Win32 check runs every 3 s: Task Manager shows 0 %.

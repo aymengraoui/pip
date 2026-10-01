@@ -58,6 +58,7 @@ export function ingest({ events, replay }) {
   for (const e of events) model.apply(e, replay);
   if (replay) model.settleMood();
   else clock.wake();
+  inspectChanged();
 }
 
 export function setMuted(on) { sound.setMuted(on); }
@@ -81,6 +82,24 @@ export function setPaused(on) {
   if (on) { particles.clear(); speech.clear(); }
 }
 
+// The inspector panel used to poll a snapshot four times a second, purely so a
+// "12s ago" could tick. Nothing ticks now, so it is told when something actually
+// happened instead: a hook event, a change of status, or a new focus.
+const watchers = new Set();
+
+/** Subscribe to "the inspector's data changed". Returns an unsubscribe. */
+export function subscribeInspect(fn) {
+  watchers.add(fn);
+  return () => watchers.delete(fn);
+}
+
+function inspectChanged() {
+  if (!inspector.isOpen()) return;
+  for (const fn of watchers) {
+    try { fn(); } catch {}
+  }
+}
+
 /** A panel grew or shrank with its content: resize the notch to match. */
 export function resizePanel(h) { layout.resizePanel(h); clock.wake(); }
 
@@ -88,11 +107,14 @@ export function resizePanel(h) { layout.resizePanel(h); clock.wake(); }
 export function inspectSnapshot() { return inspector.snapshot(); }
 export function closeInspector() { inspector.close(); }
 /** The panel asked to follow something else (a chip click). */
-export function focusInspect(target) { inspector.open(target); clock.wake(); }
+export function focusInspect(target) { inspector.open(target); inspectChanged(); clock.wake(); }
 /** Open the inspector on the busiest session (the tray/menu path). */
 export function inspectLead() {
   const target = inspector.leadTarget();
-  if (target) bridge.ui.onInspect(inspector.open(target));
+  if (target) {
+    bridge.ui.onInspect(inspector.open(target));
+    inspectChanged();
+  }
   return !!target;
 }
 
@@ -191,7 +213,9 @@ function fitWindow(t) {
 let drawnHeight = H;
 
 function frame(dt, t) {
+  const was = model.mood;
   model.refreshMood();
+  if (model.mood !== was) inspectChanged();
 
   // Low frame rates take several small physics steps, so springs stay stable.
   let rem = dt;

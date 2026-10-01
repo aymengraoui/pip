@@ -29,15 +29,10 @@ export function project(cwd) {
   return parts[parts.length - 1] || cwd;
 }
 
-/** "12s" / "4m" / "2h" since a wall-clock timestamp. */
-export function ago(ms) {
-  const s = Math.max(0, Math.round((wall() - ms) / 1000));
-  if (s < 60) return `${s}s`;
-  if (s < 3600) return `${Math.round(s / 60)}m`;
-  return `${Math.round(s / 3600)}h`;
-}
-
-/** A duration, for the inspector: "0.4s" / "12s" / "3m 20s". */
+/**
+ * How long something took: "0.4s" / "12s" / "3m 20s". Only ever used on work
+ * that has finished, so the number never needs updating again.
+ */
 export function duration(ms) {
   const s = Math.max(0, ms) / 1000;
   if (s < 1) return `${s.toFixed(1)}s`;

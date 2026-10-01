@@ -7,7 +7,7 @@
 // the panel is never stale.
 
 import { MOODS, agents, history, lead, running, sessions } from "./model.js";
-import { project, wall } from "./util.js";
+import { project } from "./util.js";
 
 const AGENT_STATES = {
   working: { label: "Working", accent: "#3D9BFF" },
@@ -57,8 +57,14 @@ function peers() {
   return out;
 }
 
-/** One log entry, with its duration resolved against the clock. */
-function entry(e, w) {
+/**
+ * One log entry. A finished tool call carries how long it took, which is a fact
+ * about the task and never changes. A running one carries no number at all: a
+ * clock that ticks in the panel means re-rendering it forever for no new
+ * information.
+ */
+function entry(e) {
+  const running = e.kind === "tool" && !e.end;
   return {
     t: e.t,
     kind: e.kind,
@@ -66,9 +72,8 @@ function entry(e, w) {
     text: e.text || "",
     result: e.result || "",
     failed: !!e.failed,
-    running: e.kind === "tool" && !e.end,
-    ms: e.kind === "tool" ? (e.end || w) - e.t : 0,
-    ago: w - e.t,
+    running,
+    ms: e.kind === "tool" && !running ? e.end - e.t : 0,
   };
 }
 
@@ -81,7 +86,6 @@ export function snapshot() {
   const found = find(focus.key);
   if (!found) return { key: focus.key, missing: true, peers: peers() };
   const { it, live } = found;
-  const w = wall();
   const agent = it.kind === "agent";
   const state = agent ? (AGENT_STATES[it.state] || { label: it.state, accent: "#8E8E98" }) : MOODS[it.state];
   const inFlight = running(it);
@@ -100,13 +104,10 @@ export function snapshot() {
     desc: agent ? it.desc : it.prompt || "",
     tools: it.tools,
     spawned: agent ? 0 : it.spawned,
-    startedAgo: w - it.startedWall,
-    updatedAgo: w - it.t,
-    endedAgo: it.endedWall ? w - it.endedWall : 0,
     // Several tool calls can be in flight at once; the newest is the headline.
-    doing: inFlight[0] ? { tool: inFlight[0].tool, text: inFlight[0].text, ms: w - inFlight[0].t } : null,
+    doing: inFlight[0] ? { tool: inFlight[0].tool, text: inFlight[0].text } : null,
     alsoRunning: Math.max(0, inFlight.length - 1),
-    log: it.log.slice().reverse().map((e) => entry(e, w)),
+    log: it.log.slice().reverse().map(entry),
     peers: peers(),
   };
 }

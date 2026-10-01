@@ -8,6 +8,9 @@ const FILE = () => path.join(app.getPath("userData"), "settings.json");
 
 const DEFAULTS = {
   muted: false,
+  // Whether the hook relay records a short line about how each tool call went.
+  // Read by resources/hook.js, which sits next to this file.
+  recordResults: true,
   gameMode: { enabled: true, fullscreen: true, extraExes: [] },
 };
 

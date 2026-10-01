@@ -1,14 +1,15 @@
 // Click a sproutling (or a row in the open notch) and this panel says exactly
-// what that subagent or session is doing, live, without switching windows.
+// what that subagent or session is doing, without switching windows.
 //
-// It owns no state: the engine keeps the activity log, and we poll a snapshot of
-// it a few times a second.
+// It owns no state: the engine keeps the activity log and tells us when it
+// changed. Nothing in here counts seconds. A panel full of "14s ago" has to be
+// re-rendered forever to stay true, and it never says anything the task and the
+// status don't already say; a finished call's duration is a fact and sits still.
 
 import { useEffect, useLayoutEffect, useRef, useState } from "react";
 import * as engine from "../engine/index.js";
 import { duration } from "../engine/util.js";
 
-const POLL_MS = 250;
 const SHOWN = 8;        // entries on screen; the rest are counted, not scrolled
 const PANEL_CHROME = 74; // the notch header above the panel, plus its bottom padding
 
@@ -23,17 +24,14 @@ const KINDS = {
   end: { label: "Session ended", tone: "" },
 };
 
-const since = (ms) => (ms < 1500 ? "now" : duration(ms) + " ago");
 const hueColor = (hue) => (hue < 0 ? "var(--mint)" : `hsl(${hue},75%,76%)`);
 
 export default function Inspector() {
   const [snap, setSnap] = useState(() => engine.inspectSnapshot());
   const body = useRef(null);
 
-  useEffect(() => {
-    const id = setInterval(() => setSnap(engine.inspectSnapshot()), POLL_MS);
-    return () => clearInterval(id);
-  }, []);
+  // Redraw when the engine says something happened, and not otherwise.
+  useEffect(() => engine.subscribeInspect(() => setSnap(engine.inspectSnapshot())), []);
 
   // Nothing here scrolls: the notch is told how tall this content is and grows
   // to fit it. Measured after every paint, since the log grows as work happens.
@@ -71,10 +69,9 @@ export default function Inspector() {
       <Doing snap={snap} />
 
       <div className="insp-stats">
-        <span>started {duration(snap.startedAgo)} ago</span>
         <span>{snap.tools} tool{snap.tools === 1 ? "" : "s"}</span>
         {snap.spawned > 0 && <span>{snap.spawned} helper{snap.spawned === 1 ? "" : "s"}</span>}
-        {snap.kind === "session" && <span>last event {since(snap.updatedAgo)}</span>}
+        {snap.background && <span>runs in the background</span>}
       </div>
 
       <div className="insp-label">Activity</div>
@@ -97,7 +94,6 @@ function Doing({ snap }) {
         <span className="pulse" />
         <b>{snap.doing.tool || "working"}</b>
         {snap.doing.text && <span className="insp-detail">{snap.doing.text}</span>}
-        <span className="insp-ms">{duration(snap.doing.ms)}</span>
         {snap.alsoRunning > 0 && <span className="insp-more">+{snap.alsoRunning} more running</span>}
       </div>
     );
@@ -114,8 +110,7 @@ function Doing({ snap }) {
 function Entry({ e }) {
   const kind = KINDS[e.kind] || { label: e.kind, tone: "" };
   return (
-    <div className={`insp-row ${e.failed ? "failed" : ""}`}>
-      <div className="insp-when">{since(e.ago)}</div>
+    <div className={`insp-row ${e.failed ? "failed" : ""} ${e.running ? "live" : ""}`}>
       <div className="insp-what">
         {e.kind === "tool"
           ? <><b>{e.tool || "tool"}</b>{e.text && <span className="insp-detail">{e.text}</span>}</>
@@ -123,8 +118,8 @@ function Entry({ e }) {
         {e.result && <div className="insp-result">{e.result}</div>}
       </div>
       <div className="insp-ms">
-        {e.running ? <span className="running">{duration(e.ms)}…</span> : e.ms ? duration(e.ms) : ""}
-        {e.failed && <span className="bad"> failed</span>}
+        {e.running ? <span className="pulse" /> : e.ms ? duration(e.ms) : ""}
+        {e.failed && <span className="bad">failed</span>}
       </div>
     </div>
   );

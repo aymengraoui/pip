@@ -108,6 +108,11 @@ Claude Code event
 mode): same state changes, no sounds, no confetti, events older than 30 min
 dropped. Every new code path must honour it.
 
+`res` (the clipped outcome of a tool call) is the one field that can carry a
+fragment of your terminal output, so it is the one the user can switch off:
+`recordResults` in `settings.json`, which `hook.js` reads from its own directory
+on each run. Default on; absent or unreadable settings mean on.
+
 `hook.js` rules, in order of importance: **never print to stdout** (a hook that
 prints can answer a permission prompt), never fail, never take long. It is copied
 to `%APPDATA%\Pip\hook.js` on every start (`hooks.ensureHookFile`), so changing it
@@ -213,6 +218,13 @@ A panel is React DOM inside the notch, not a second window. `App.jsx` holds
 sproutlings on the panel's bottom edge. `Inspector.jsx` keeps no state of its
 own: it polls `engine.inspectSnapshot()` every 250 ms, so the panel can never go
 stale and the engine stays the single source of truth.
+
+**Nothing in the inspector ticks.** There is no poll and no "12s ago": the panel
+subscribes with `engine.subscribeInspect()` and re-renders only when a hook
+event arrives, the status changes, or the focus moves. A finished call shows how
+long it took, because that is a fact that never changes again; a running one
+shows a pulsing dot and no number. Adding any elapsed-time text here brings the
+render loop back, so don't.
 
 **Nothing in the inspector scrolls.** It measures itself after every paint and
 calls `engine.resizePanel(height)`, so the notch grows to the content instead

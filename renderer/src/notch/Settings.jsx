@@ -55,6 +55,12 @@ export default function Settings({ state, onDemo }) {
       <Toggle label="Start with Windows" on={state.startup} onChange={(on) => pip.setStartup(on)} />
       <Toggle label="Sounds" on={!s.muted} onChange={(on) => set({ muted: !on })} />
       <Toggle
+        label="Record tool results"
+        hint="A short result or error line per tool call, so the activity panel can show what happened. Kept in events.jsonl on this machine."
+        on={s.recordResults}
+        onChange={(on) => set({ recordResults: on })}
+      />
+      <Toggle
         label="Game mode"
         hint={state.gaming ? "A game is running: Pip is asleep" : "Hide and use no CPU while a game is running"}
         on={s.gameMode.enabled}
