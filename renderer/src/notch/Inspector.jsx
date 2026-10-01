@@ -10,6 +10,8 @@ import { useEffect, useLayoutEffect, useRef, useState } from "react";
 import * as engine from "../engine/index.js";
 import { duration } from "../engine/util.js";
 
+const pip = window.pip;
+
 const SHOWN = 8;        // entries on screen; the rest are counted, not scrolled
 const PANEL_CHROME = 74; // the notch header above the panel, plus its bottom padding
 
@@ -60,6 +62,7 @@ export default function Inspector() {
         <span className="insp-tag" style={{ color: snap.accent }}>{snap.stateLabel}</span>
         {snap.background && <span className="insp-tag">background</span>}
         {!snap.live && <span className="insp-tag">history</span>}
+        {snap.state !== "approval" && <Terminal snap={snap} />}
       </div>
 
       {(snap.desc || snap.project) && (
@@ -86,6 +89,30 @@ export default function Inspector() {
   );
 }
 
+/**
+ * Jump to the terminal this session is running in. Pip knows which process
+ * Claude Code is, and the main process walks up to whatever window is hosting
+ * it. Windows does not always allow a background app to steal focus, so the
+ * fallback is making its taskbar button blink.
+ */
+function Terminal({ snap }) {
+  const [said, setSaid] = useState("");
+  if (!snap.pid) return null;
+  return (
+    <button
+      className="chip go"
+      title="Bring that terminal to the front"
+      onClick={async () => {
+        const r = await pip.focusSession(snap.pid);
+        setSaid(r && r.ok ? (r.how === "flashed" ? "blinking in the taskbar" : "") : (r && r.reason) || "couldn't find it");
+        setTimeout(() => setSaid(""), 3000);
+      }}
+    >
+      {said || "Go to terminal"}
+    </button>
+  );
+}
+
 /** The one line that answers "what is it doing right now?". */
 function Doing({ snap }) {
   if (snap.doing) {
@@ -98,9 +125,17 @@ function Doing({ snap }) {
       </div>
     );
   }
+  if (snap.state === "approval") {
+    // The one case where the answer is "go and look": make that the button.
+    return (
+      <div className="insp-now waiting">
+        <span className="insp-detail">Waiting for your approval.</span>
+        <Terminal snap={snap} />
+      </div>
+    );
+  }
   const idle = snap.state === "done" || snap.state === "finished"
     ? "Finished — nothing running."
-    : snap.state === "approval" ? "Waiting for your approval."
     : snap.state === "thinking" ? "Thinking (no tool running)."
     : snap.state === "error" ? "Stopped after a failure."
     : "Idle — no tool running.";

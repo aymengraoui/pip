@@ -101,6 +101,7 @@ export function snapshot() {
     stateLabel: state.label,
     accent: state.accent,
     background: agent ? !!it.bg : false,
+    pid: it.pid || 0,
     desc: agent ? it.desc : it.prompt || "",
     tools: it.tools,
     spawned: agent ? 0 : it.spawned,

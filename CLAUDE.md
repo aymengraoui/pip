@@ -194,6 +194,30 @@ finishes (`PLAY_FROM`, and the `playing` flag in `layout.js`), so one of them
 ending doesn't yank the rest back inside. While it is on, the pill stops
 reserving width for them and the "+n" badge is hidden — they are all on screen.
 
+## Jumping to the terminal
+
+`resources/hook.js` records `process.ppid`, which is the Claude Code process
+itself. `electron/windows.js` turns that into a window: walk the process tree up
+from that pid (Toolhelp32, up to 12 hops) and take the closest ancestor that
+owns a visible titled top-level window — Claude Code has no window of its own,
+the terminal hosting it does.
+
+Raising it is the part Windows is allowed to refuse. Pip's notch is deliberately
+not focusable, so it is usually not the foreground app, and `SetForegroundWindow`
+from a background process is blocked. `raise()` borrows the foreground thread's
+input queue with `AttachThreadInput` for the moment it takes to ask, which works;
+if it still fails, it falls back to `FlashWindowEx` so the taskbar button blinks.
+Verified from a non-focusable always-on-top window: `how: "focused"`.
+
+The chain breaks if an intermediate process has exited — a pid that is gone is
+not in the snapshot, so the walk stops and the user is told the terminal is gone.
+That is correct for a closed terminal, and it is also why this looks broken when
+you test it from a process launched through a shim that exits (electron.cmd, for
+one). Test it from a real session.
+
+`node electron/windows.js [pid]` prints the chain and the window it resolves to;
+add `--focus` to actually raise it.
+
 ## Clicks
 
 | target | what happens | where |
@@ -203,6 +227,7 @@ reserving width for them and the "+n" badge is hidden — they are all on screen
 | a row (notch open) | same, for that session or agent | `layout.rowAt` / `rowTarget` |
 | the pill | pin the notch open | `layout.togglePinned` |
 | right click | native menu from the main process | `bridge.host.menu` |
+| Go to terminal (in the panel) | raise the terminal that session runs in | `windows.focusProcess` |
 | gear, tray, 2nd instance | Settings | `send("panel", …)` |
 | tray → Activity | inspector on the busiest session | `engine.inspectLead` |
 

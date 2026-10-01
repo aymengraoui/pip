@@ -125,7 +125,7 @@ const sid = "smoke-1";
 const cwd = "C:\\code\\smoke";
 const feed = (events, replay = false) => engine.ingest({ events: events.map((e) => ({ t: Date.now(), sid, cwd, ...e })), replay });
 
-feed([{ ev: "SessionStart" }, { ev: "UserPromptSubmit", msg: "ship the thing" }]);
+feed([{ ev: "SessionStart", pid: 4242 }, { ev: "UserPromptSubmit", msg: "ship the thing" }]);
 advance(400);
 check("a session appeared", sessions.size === 1);
 check("mood follows the session", engine.frameStats().mood === "thinking");
@@ -172,6 +172,7 @@ advance(600);
 
 let snap = engine.inspectSnapshot();
 check("the snapshot is the agent we clicked", snap && snap.key === explore.key);
+check("a helper inherits its session's terminal", snap && snap.pid === 4242, snap && String(snap.pid));
 check("it says what is running now", snap && snap.doing && snap.doing.tool === "Grep", snap && JSON.stringify(snap.doing));
 check("the headline carries the detail, not a clock", snap && snap.doing.text === "theme" && snap.doing.ms === undefined);
 check("the activity log has entries", snap && snap.log.length >= 2, snap && String(snap.log.length));
@@ -189,6 +190,7 @@ engine.focusInspect({ kind: "session", key: session.key });
 snap = engine.inspectSnapshot();
 check("a session snapshot counts its helpers", snap.spawned === 2, String(snap.spawned));
 check("a session snapshot keeps the prompt", snap.desc === "ship the thing");
+check("it remembers which process to jump to", snap.pid === 4242, String(snap.pid));
 
 // Clicking the same sproutling again closes it.
 engine.focusInspect({ kind: "agent", key: explore.key });

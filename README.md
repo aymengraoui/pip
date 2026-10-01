@@ -14,6 +14,10 @@ it is doing.
 | --- | --- |
 | ![The notch, open, listing the session and its subagents](docs/notch-open.png) | ![The inspector panel on one subagent](docs/inspector.png) |
 
+When Claude needs you, Pip says what for and offers the way back:
+
+![Pip showing a pending permission request with a Go to terminal button](docs/needs-you.png)
+
 ## Build & run
 
 ```
@@ -53,6 +57,13 @@ Installed to `%LOCALAPPDATA%\Programs\pip\Pip.exe`. Data lives in `%APPDATA%\Pip
   so nothing scrolls, and it never takes focus, so your terminal stays active.
   Click the same sproutling again, or the ×, to close it. Also on the tray menu
   as **Activity**.
+- **Go to terminal.** When Claude is waiting on you, the panel says so and puts
+  the button right there: click it and the terminal that session is running in
+  comes to the front. Pip knows which process Claude Code is because the hook
+  relay records its own parent, and it walks up from there to whatever window is
+  hosting it — Windows Terminal, a VS Code shell, plain conhost. Windows doesn't
+  always let a background app steal focus; when it refuses, Pip makes the
+  taskbar button blink instead.
 - **The playground**: with two or more helpers working, they leave the notch and
   amble around the strip of screen underneath it, looking where they are going
   and hopping now and then. Only they take clicks down there — the rest of that

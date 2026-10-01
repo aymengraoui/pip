@@ -23,6 +23,7 @@ contextBridge.exposeInMainWorld("pip", {
   setSettings: (patch) => ipcRenderer.invoke("settings:set", patch),
   writeHooks: (install) => ipcRenderer.invoke("hooks:write", install),
   setStartup: (on) => ipcRenderer.invoke("startup:set", on),
+  focusSession: (pid) => ipcRenderer.invoke("session:focus", pid),
   checkUpdate: () => ipcRenderer.invoke("update:check"),
   installUpdate: () => ipcRenderer.invoke("update:install"),
 });

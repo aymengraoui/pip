@@ -107,13 +107,14 @@ function sessionOf(e) {
   let s = sessions.get(sid);
   if (!s) {
     s = {
-      kind: "session", key: "s:" + sid, sid, state: "idle", tool: "", detail: "", cwd: "",
+      kind: "session", key: "s:" + sid, sid, state: "idle", tool: "", detail: "", cwd: "", pid: 0,
       t: e.t, startedWall: e.t || wall(), endedWall: 0, prompt: "",
       log: [], tools: 0, spawned: 0, open: new Map(),
     };
     sessions.set(sid, s);
   }
   if (e.cwd) s.cwd = e.cwd;
+  if (e.pid) s.pid = e.pid;
   s.t = e.t;
   return s;
 }
@@ -127,6 +128,7 @@ function spawn(key, sid, type, desc, bg, t, quiet) {
   type = type || "agent";
   const m = {
     kind: "agent", key, sid, aid: "", type, desc: desc || "", tool: "", toolDetail: "",
+    pid: (sessions.get(sid) || {}).pid || 0,   // the terminal it belongs to
     state: "working", bg: !!bg, t, quiet, hue: hueFor(type),
     born: now(), startedWall: t || wall(), doneAt: 0, endedWall: 0,
     log: [], tools: 0, open: new Map(),

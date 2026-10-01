@@ -72,6 +72,9 @@ process.stdin.on("end", () => {
       ev: e.hook_event_name || process.argv[2] || "",
       sid: e.session_id || "",
       cwd: e.cwd || "",
+      // Our parent is Claude Code itself. Pip walks up from here to find the
+      // terminal window hosting it, so you can jump straight to the session.
+      pid: process.ppid || 0,
       tool: e.tool_name || "",
       tuid: e.tool_use_id || "",
       detail: summarize(input),

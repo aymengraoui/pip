@@ -15,6 +15,7 @@ const store = require("./store");
 const hooks = require("./hooks");
 const gamemode = require("./gamemode");
 const updater = require("./updater");
+const windows = require("./windows");
 
 app.setName("Pip");
 app.setAppUserModelId("dev.local.pip");
@@ -239,6 +240,8 @@ ipcMain.handle("hooks:write", (_e, install) => {
   send("state", publicState());
   return r;
 });
+/** Bring the terminal running a session to the front. */
+ipcMain.handle("session:focus", (_e, pid) => windows.focusProcess(Number(pid) || 0));
 ipcMain.handle("update:check", async () => {
   await updater.check(true);
   const s = publicState();
