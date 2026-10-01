@@ -1,34 +1,44 @@
-# Pip 1.3.0
+# Pip 1.4.0
 
-Pip could already tell you Claude was waiting on you. Now it can take you there.
+Pip starts noticing things.
 
 ## New
 
-- **Go to terminal.** When a session is waiting for your approval, the activity
-  panel says what for and puts the button right next to the reason: click it and
-  the terminal that session is running in comes to the front. No more working out
-  which of six terminals is the one asking.
+- **Review.** When Claude is waiting on you, the notch says what for and shows a
+  **Review →** button. One click and the terminal that is asking comes to the
+  front, where the whole command is on screen. It is on the tray menu too, for
+  when the notch is behind something.
 
-  Pip knows which process Claude Code is because its hook relay runs as a child
-  of it, and it walks up from there to whatever window is hosting it — Windows
-  Terminal, a VS Code shell, plain conhost. Windows doesn't always let a
-  background app take focus; when it refuses, Pip blinks the terminal's taskbar
-  button instead. The button is on every session and helper in the panel, not
-  only the ones waiting.
+  Pip will not answer a permission prompt for you, and that is on purpose. The
+  one irreversible step in the loop stays where you can read what you are
+  agreeing to.
 
-## Note
+- **Pip says when something looks stuck.** It watches every session at once, so
+  it notices what you would not while reading one terminal: the same command
+  three times in a few minutes, a tool that has been running for over ten, a
+  session gone quiet with nothing in flight, or a helper taking far longer than
+  that kind of helper usually does. The notch says so, the panel says which, and
+  nothing pops up. The thresholds are shy on purpose — a companion that cries
+  wolf gets muted.
 
-If you are on 1.2.0, this is the first release that installs itself: Pip will
-find it, download it in the background and offer **Restart now** in Settings and
-in the tray. Nothing restarts without you asking.
+- **While you were away.** Pip knows when nobody has touched the keyboard for a
+  few minutes. Come back and it tells you what you missed in one line — *"2 turns
+  finished, 1 failure"* — and then shuts up about it.
 
-On 1.1.0 or older, grab the installer below once and you are on the automatic
-path from then on.
+## Changed
+
+- **The playground means something now.** Where the sproutlings wander comes from
+  the work rather than a dice roll: two helpers running the same tool drift
+  together, a busy one moves more, one that just failed slumps and stays low for
+  a few seconds, and background work keeps to the edges. Same CPU, and after a
+  day of it you start reading the shape of a session at a glance.
 
 ## Install
 
-1. Download `Pip-Setup-1.3.0.exe` below and run it. It installs for your user only.
-2. The installer isn't code-signed yet, so Windows SmartScreen may warn you: choose **More info → Run anyway**.
-3. Open the gear in the notch and click **Install** next to Claude Code hooks (needs Node.js on PATH). New Claude Code sessions will show up in Pip.
+On 1.2.0 or 1.3.0, Pip will find this one itself and offer **Restart now**.
+
+Otherwise download `Pip-Setup-1.4.0.exe` below and run it once; it installs for
+your user only. The installer isn't code-signed yet, so Windows SmartScreen may
+warn you: choose **More info → Run anyway**.
 
 Requires Windows 10 or 11 (x64).
