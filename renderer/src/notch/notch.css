@@ -62,6 +62,7 @@ button { font: inherit; }
   border: 1px solid var(--line); background: #1A1A21; color: var(--text); cursor: pointer;
 }
 .btn:hover { background: #22222B; }
+.btn:disabled { opacity: 0.5; cursor: default; background: #1A1A21; }
 
 .toggle { width: 36px; height: 21px; border-radius: 11px; border: 0; background: #2A2A33; position: relative; cursor: pointer; flex: none; transition: background 150ms; }
 .toggle i { position: absolute; top: 3px; left: 3px; width: 15px; height: 15px; border-radius: 50%; background: #fff; transition: transform 150ms; }

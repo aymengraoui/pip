@@ -14,6 +14,7 @@ const path = require("path");
 const store = require("./store");
 const hooks = require("./hooks");
 const gamemode = require("./gamemode");
+const updater = require("./updater");
 
 app.setName("Pip");
 app.setAppUserModelId("dev.local.pip");
@@ -151,10 +152,14 @@ function setStartup(on) {
 function updateTray(info = {}) {
   if (!tray) return;
   const status = gaming ? `Sleeping: ${info.reason || "game running"}` : userPaused ? "Paused" : "Awake";
+  const update = updater.status();
   tray.setToolTip(`Pip · ${status}`);
   tray.setContextMenu(Menu.buildFromTemplate([
     { label: `Pip · ${status}`, enabled: false },
     { type: "separator" },
+    ...(update.status === "ready"
+      ? [{ label: `Restart to update to ${update.version}`, click: () => updater.install() }, { type: "separator" }]
+      : []),
     { label: "Activity", click: () => openPanel("inspect") },
     { label: "Settings", click: () => openPanel("settings") },
     { label: "Pause Pip", type: "checkbox", checked: userPaused, click: (i) => { userPaused = i.checked; applyRunState(); } },
@@ -195,6 +200,7 @@ function publicState() {
     hooks: hooks.status(),
     startup: startupEnabled(),
     gaming,
+    update: updater.status(),
     version: app.getVersion(),
   };
 }
@@ -233,6 +239,13 @@ ipcMain.handle("hooks:write", (_e, install) => {
   send("state", publicState());
   return r;
 });
+ipcMain.handle("update:check", async () => {
+  await updater.check(true);
+  const s = publicState();
+  send("state", s);
+  return s;
+});
+ipcMain.handle("update:install", () => updater.install());
 ipcMain.handle("startup:set", (_e, on) => {
   setStartup(on);
   const s = publicState();
@@ -250,6 +263,11 @@ app.whenReady().then(() => {
   createNotch();
   createTray();
   screen.on("display-metrics-changed", placeNotch);
+  // Nothing is checked while a game is running or Pip is paused.
+  updater.init({
+    canCheck: () => !suspended(),
+    onChange: () => { send("state", publicState()); updateTray(); },
+  });
   applyRunState();
   gameTick();
 });

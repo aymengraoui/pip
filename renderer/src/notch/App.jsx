@@ -24,6 +24,7 @@ export default function App() {
   const [layout, setLayout] = useState({ x: 200, w: 240, h: 48, expanded: false, panel: null });
   const [panel, setPanel] = useState(null);
   const [state, setState] = useState(null);
+  const announced = useRef(false);
   const panelRef = useRef(null);
   panelRef.current = panel;
 
@@ -54,7 +55,16 @@ export default function App() {
     );
     const offs = [
       pip.onEvents((p) => engine.ingest(p)),
-      pip.onState((s) => { setState(s); engine.setMuted(s.settings.muted); }),
+      pip.onState((s) => {
+        setState(s);
+        engine.setMuted(s.settings.muted);
+        // An update finished downloading: Pip mentions it once, and waits.
+        if (s.update && s.update.status === "ready" && !announced.current) {
+          announced.current = true;
+          engine.sfx("done");
+          engine.speak(`I grew! restart me for ${s.update.version}`, 4);
+        }
+      }),
       pip.onPause((on) => { engine.setPaused(on); if (on) closePanel(); }),
       pip.onCursor((c) => engine.setCursor(c)),
       pip.onPanel((name) => {

@@ -1,0 +1,91 @@
+name: Release
+
+# Push a tag and this builds the installer and publishes the release that
+# electron-updater reads:
+#
+#   1. bump "version" in package.json
+#   2. rewrite RELEASE_NOTES.md for it (that file becomes the release body)
+#   3. commit, then: git tag v1.2.0 && git push origin main v1.2.0
+#
+# latest.yml and the .blockmap go up with the installer. They are what makes
+# the update automatic and the download differential, so never remove them
+# from the asset list.
+
+on:
+  push:
+    tags: ["v*"]
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: An existing tag to build and publish
+        required: true
+
+permissions:
+  contents: write
+
+jobs:
+  windows:
+    name: Build and publish the installer
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.inputs.tag || github.ref }}
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+
+      - name: Cache Electron downloads
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~\AppData\Local\electron\Cache
+            ~\AppData\Local\electron-builder\Cache
+          key: electron-${{ runner.os }}-${{ hashFiles('package-lock.json') }}
+          restore-keys: electron-${{ runner.os }}-
+
+      - run: npm ci
+
+      - name: The tag and package.json must agree
+        id: ver
+        shell: pwsh
+        run: |
+          $version = (Get-Content package.json -Raw | ConvertFrom-Json).version
+          $tag = "${{ github.event.inputs.tag || github.ref_name }}"
+          if ("v$version" -ne $tag) {
+            throw "package.json says $version but the tag is $tag. The updater reads the version out of the build, so these have to match."
+          }
+          "version=$version" >> $env:GITHUB_OUTPUT
+          "tag=$tag" >> $env:GITHUB_OUTPUT
+
+      - name: Smoke test the engine
+        run: npm run smoke
+
+      - name: Build the installer
+        run: npm run release
+
+      - name: Publish the release
+        shell: pwsh
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          $v = "${{ steps.ver.outputs.version }}"
+          $tag = "${{ steps.ver.outputs.tag }}"
+          $assets = @(
+            "release/Pip-Setup-$v.exe",
+            "release/Pip-Setup-$v.exe.blockmap",
+            "release/latest.yml"
+          )
+          foreach ($a in $assets) {
+            if (-not (Test-Path $a)) { throw "the build did not produce $a" }
+          }
+          gh release view $tag *> $null
+          if ($LASTEXITCODE -eq 0) {
+            Write-Host "release $tag exists, replacing its assets"
+            gh release upload $tag $assets --clobber
+          } else {
+            gh release create $tag --title "Pip $v" --notes-file RELEASE_NOTES.md $assets
+          }
+          Write-Host "published $tag"

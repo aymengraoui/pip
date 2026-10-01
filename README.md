@@ -1,5 +1,7 @@
 # Pip
 
+[![CI](https://github.com/aymengraoui/pip/actions/workflows/ci.yml/badge.svg)](https://github.com/aymengraoui/pip/actions/workflows/ci.yml)
+
 A tiny companion that lives in a notch at the top of your screen and follows your Claude Code sessions and subagents.
 
 ![Pip in its notch, with three subagents out in the playground below it](docs/notch-playground.png)
@@ -24,6 +26,21 @@ npm run dist       # installer → release/Pip-Setup-<version>.exe (electron-bui
 
 If `node_modules/electron/dist` is missing after install, run `node node_modules/electron/install.js`.
 
+### Cutting a release
+
+Bump `version` in `package.json`, rewrite `RELEASE_NOTES.md` (it becomes the
+release body), then:
+
+```
+git commit -am "Pip 1.2.0" && git tag v1.2.0 && git push origin main v1.2.0
+```
+
+GitHub Actions builds the installer on Windows, runs the smoke test and
+publishes the release with `latest.yml` and the `.blockmap` alongside it. Those
+two files are what make updates automatic and downloads differential, so leave
+them in the asset list. The tag has to match `package.json`; the workflow checks
+and fails loudly if it doesn't.
+
 Installed to `%LOCALAPPDATA%\Programs\pip\Pip.exe`. Data lives in `%APPDATA%\Pip` (`settings.json`, `hook.js`, `events.jsonl`).
 
 ## Using it
@@ -43,6 +60,12 @@ Installed to `%LOCALAPPDATA%\Programs\pip\Pip.exe`. Data lives in `%APPDATA%\Pip
   open it, or when the last one finishes.
 - **Settings** live in the notch: the gear button (or the tray icon, or right-click Pip). Start with Windows, sounds, game mode, extra games, Claude Code hooks, demo, quit.
 - **Subagents**: every agent Claude Code spawns pops out of Pip as a colored sproutling and poofs away when it finishes.
+- **Updates** install themselves. Pip checks GitHub a minute after it starts and
+  every six hours after that, downloads a new version in the background and then
+  waits: it says it has grown, and puts **Restart now** in Settings and the tray.
+  It never restarts on you, and it never checks at all while a game is running or
+  Pip is paused. (Updating from 1.1.0 or older is still a manual download, since
+  those builds shipped before any of this existed.)
 - Click Pip to tickle, wiggle the mouse over it to pet, poke it five times for dizzy.
 
 ## CPU

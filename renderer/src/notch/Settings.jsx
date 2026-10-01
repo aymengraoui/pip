@@ -15,10 +15,24 @@ function Toggle({ label, hint, on, onChange }) {
   );
 }
 
+/** One line about where the next version is. */
+function updateHint(u) {
+  switch (u.status) {
+    case "dev": return "Running from source, so updates are off";
+    case "checking": return "Checking…";
+    case "downloading": return `Downloading Pip ${u.version}…`;
+    case "ready": return `Pip ${u.version} is ready — restart to finish`;
+    case "error": return u.error || "Couldn't check just now";
+    default: return `Pip ${u.current} is the latest`;
+  }
+}
+
 export default function Settings({ state, onDemo }) {
   const s = state.settings;
+  const u = state.update || { status: "idle", current: state.version };
   const [games, setGames] = useState(s.gameMode.extraExes.join(", "));
   const [msg, setMsg] = useState(null);
+  const [checking, setChecking] = useState(false);
   useEffect(() => setGames(s.gameMode.extraExes.join(", ")), [s.gameMode.extraExes]);
 
   const set = (patch) => pip.setSettings(patch);
@@ -75,6 +89,20 @@ export default function Settings({ state, onDemo }) {
         </div>
       </div>
       {msg && <div className={`hint ${msg.ok ? "ok" : "bad"}`}>{msg.text}</div>}
+      <div className="s-row static">
+        <div className="s-text">
+          <div>Updates</div>
+          <div className={`hint ${u.status === "ready" ? "ok" : u.status === "error" ? "bad" : ""}`}>{updateHint(u)}</div>
+        </div>
+        <div className="s-actions">
+          {u.status === "ready"
+            ? <button className="btn" onClick={() => pip.installUpdate()}>Restart now</button>
+            : <button className="btn" disabled={checking || u.status === "dev"} onClick={async () => {
+                setChecking(true);
+                try { await pip.checkUpdate(); } finally { setChecking(false); }
+              }}>{checking || u.status === "checking" ? "Checking…" : "Check now"}</button>}
+        </div>
+      </div>
       <div className="s-footer">
         <span className="hint">Pip v{state.version}</span>
         <div className="s-actions">

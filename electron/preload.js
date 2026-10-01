@@ -23,4 +23,6 @@ contextBridge.exposeInMainWorld("pip", {
   setSettings: (patch) => ipcRenderer.invoke("settings:set", patch),
   writeHooks: (install) => ipcRenderer.invoke("hooks:write", install),
   setStartup: (on) => ipcRenderer.invoke("startup:set", on),
+  checkUpdate: () => ipcRenderer.invoke("update:check"),
+  installUpdate: () => ipcRenderer.invoke("update:install"),
 });

@@ -220,8 +220,41 @@ calls `engine.resizePanel(height)`, so the notch grows to the content instead
 "+n earlier". If you add anything to that panel, keep it inside that budget
 rather than reaching for `overflow: auto`.
 
+## Releasing, and how updates reach people
+
+A release is a tag. `.github/workflows/release.yml` does the rest on
+`windows-latest`: `npm ci`, `npm run smoke`, `npm run release` (which is `dist`
+without the icon step, since `build/icon.png` is committed), then `gh release
+create` with `RELEASE_NOTES.md` as the body.
+
+Three things that must stay true, or updates silently stop working:
+
+1. **The tag matches `package.json`.** `latest.yml` carries the version out of
+   the build, so `v1.2.0` and `"version": "1.2.0"` have to agree. The workflow
+   checks this before it builds.
+2. **`latest.yml` and the `.blockmap` go up with the installer.** The first is
+   the feed electron-updater polls; the second is what makes the download
+   differential instead of another 110 MB. `build.publish` in `package.json`
+   points at this repo and is what makes electron-builder emit them at all.
+3. **Local builds never publish.** Both `dist` and `release` pass
+   `--publish never`; only CI, holding `GITHUB_TOKEN`, puts anything on GitHub.
+
+`electron/updater.js` holds the client side. It is inert unless `app.isPackaged`,
+checks a minute after start and every six hours, and **skips entirely while
+`suspended()`** (a game is running, or Pip is paused) — game mode promises no
+network, not just no frames. It downloads in the background, then stops: the
+user restarts from Settings or the tray, or it lands on the next quit via
+`autoInstallOnAppQuit`. Nothing in that file may throw; no update is always an
+acceptable outcome.
+
+Anyone on 1.1.0 or older has no updater in their build at all, so their first
+hop to a newer version is a manual download. That is unavoidable and only
+happens once.
+
 ## When you change something
 
+- **Any push or PR** → CI runs `npm run build:ui` and `npm run smoke` on Linux
+  (Electron's binary is skipped: the engine tests need no browser).
 - **Engine change** → `npm run smoke`. It stubs the canvas, the clock
   (`performance.now` *and* `Date.now`, so aging and napping are testable) and the
   audio context, then feeds a whole session, clicks a sproutling, opens the
