@@ -11,6 +11,8 @@
 //   - nothing here may throw or block startup: no update is always an option
 
 const { app } = require("electron");
+const fs = require("fs");
+const path = require("path");
 
 const FIRST_CHECK = 60e3;        // let the machine settle after login first
 const EVERY = 6 * 3600e3;
@@ -40,6 +42,33 @@ function load() {
   updater.on("update-downloaded", (info) => set("ready", { version: info && info.version }));
   updater.on("error", (err) => set("error", { error: (err && err.message) || String(err) }));
   return updater;
+}
+
+/**
+ * electron-updater keeps the installer it applied: 107 MB sitting in its cache
+ * for nothing, after every update. If the staged file is the version we are
+ * already running, it has been consumed and can go. Anything still pending is
+ * left alone.
+ */
+function tidyCache() {
+  try {
+    if (!process.env.LOCALAPPDATA) return 0;
+    const dir = path.join(process.env.LOCALAPPDATA, `${app.getName().toLowerCase()}-updater`, "pending");
+    const info = JSON.parse(fs.readFileSync(path.join(dir, "update-info.json"), "utf8"));
+    const staged = (String(info.fileName).match(/(\d+\.\d+\.\d+)/) || [])[1];
+    if (!staged || staged !== app.getVersion()) return 0;
+    let freed = 0;
+    for (const name of fs.readdirSync(dir)) {
+      const file = path.join(dir, name);
+      try {
+        freed += fs.statSync(file).size;
+        fs.rmSync(file, { force: true, recursive: true });
+      } catch {}
+    }
+    return freed;
+  } catch {
+    return 0; // no cache, nothing staged, or it is not ours to touch
+  }
 }
 
 /** Check now, unless Pip is meant to be costing nothing. */
@@ -75,6 +104,7 @@ function init({ canCheck, onChange } = {}) {
   allowed = canCheck || allowed;
   notify = onChange || notify;
   if (!app.isPackaged) { set("dev"); return; }
+  tidyCache(); // we may have just restarted into the update it left behind
   schedule(FIRST_CHECK);
 }
 

@@ -284,6 +284,11 @@ user restarts from Settings or the tray, or it lands on the next quit via
 `autoInstallOnAppQuit`. Nothing in that file may throw; no update is always an
 acceptable outcome.
 
+`tidyCache()` runs at startup and deletes the staged installer once the version
+in `update-info.json` matches the version now running: electron-updater keeps it
+otherwise, and that is 107 MB per update for nothing. Anything still pending is
+left alone.
+
 Anyone on 1.1.0 or older has no updater in their build at all, so their first
 hop to a newer version is a manual download. That is unavoidable and only
 happens once.
