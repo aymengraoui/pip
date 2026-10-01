@@ -14,7 +14,8 @@
     "icon": "electron scripts/make-icon.js",
     "smoke": "rolldown scripts/smoke.js -f esm -p node -o .smoke/smoke.mjs && node .smoke/smoke.mjs",
     "start": "vite build && electron .",
-    "dist": "vite build && electron scripts/make-icon.js && electron-builder --win nsis --publish never"
+    "dist": "vite build && electron scripts/make-icon.js && electron-builder --win nsis --publish never && npm run prune",
+    "prune": "node scripts/prune-release.js"
   },
   "build": {
     "appId": "dev.local.pip",

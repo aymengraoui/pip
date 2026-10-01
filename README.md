@@ -19,6 +19,7 @@ npm install
 npm start          # build the UI and run from source
 npm run smoke      # headless test of the engine (~30 checks, no window)
 npm run dist       # installer → release/Pip-Setup-<version>.exe (electron-builder, NSIS, per-user)
+                   # each build prunes older installers, so release/ only ever holds the current one
 ```
 
 If `node_modules/electron/dist` is missing after install, run `node node_modules/electron/install.js`.

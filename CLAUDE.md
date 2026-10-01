@@ -10,7 +10,8 @@ the creature. React only draws the two panels.
 npm start      # vite build + electron .   (run it from source)
 npm run smoke  # headless engine test, ~30 checks, no window   <- run this after engine changes
 npm run icon   # re-render build/icon.png from the engine
-npm run dist   # installer -> release/Pip-Setup-<version>.exe
+npm run dist   # installer -> release/Pip-Setup-<version>.exe (then prunes older ones)
+npm run prune  # keep only the current version's installer in release/
 PIP_DEV=1      # load the renderer from the vite dev server (npm run dev first)
 PIP_DEBUG=1    # expose window.__pip = { engine, openPanel, closePanel } to DevTools
 ```
