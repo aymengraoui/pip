@@ -2,7 +2,7 @@
   "name": "pip",
   "productName": "Pip",
   "private": true,
-  "version": "1.4.0",
+  "version": "1.5.0",
   "description": "Pip, a tiny companion that lives at the top of your screen and watches your Claude Code sessions",
   "author": "aymengraoui",
   "license": "MIT",
