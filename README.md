@@ -4,20 +4,20 @@
 
 A tiny companion that lives in a notch at the top of your screen and follows your Claude Code sessions and subagents.
 
+![The notch showing a permission request, with a Review button](docs/review.png)
+
+When Claude needs you, Pip says what for and offers one click to the terminal
+that is asking — the decision stays where you can read the whole command.
+
 ![Pip in its notch, with three subagents out in the playground below it](docs/notch-playground.png)
 
-When more than one helper is working they come out to play under the notch;
-hovering opens the notch into a list, and clicking any of them says exactly what
-it is doing.
+When more than one helper is working they come out to play under the notch, and
+where they go is the work: same tool, same corner. Hovering opens the notch into
+a list, and clicking any of them says exactly what it is doing.
 
 | | |
 | --- | --- |
 | ![The notch, open, listing the session and its subagents](docs/notch-open.png) | ![The inspector panel on one subagent](docs/inspector.png) |
-
-When Claude needs you, Pip says what for and offers one click to the terminal
-that is asking — the decision stays where you can read the whole command:
-
-![The notch showing a permission request with a Review button](docs/review.png)
 
 ![The activity panel on a session waiting for approval](docs/needs-you.png)
 
@@ -26,7 +26,7 @@ that is asking — the decision stays where you can read the whole command:
 ```
 npm install
 npm start          # build the UI and run from source
-npm run smoke      # headless test of the engine (~30 checks, no window)
+npm run smoke      # headless test of the engine (59 checks, no window)
 npm run dist       # installer → release/Pip-Setup-<version>.exe (electron-builder, NSIS, per-user)
                    # each build prunes older installers, so release/ only ever holds the current one
 ```
