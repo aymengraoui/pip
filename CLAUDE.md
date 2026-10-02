@@ -31,7 +31,7 @@ flowchart TD
   relay -->|one JSON line| log[("%APPDATA%/Pip/events.jsonl")]
 
   subgraph MAIN["main process (electron/)"]
-    main["main.js<br/>window, tray, cursor polling, run state"]
+    main["main.js<br/>window, tray, cursor polling,<br/>screen following, run state"]
     hooksjs["hooks.js<br/>install/remove + tail(events.jsonl)"]
     store["store.js<br/>settings.json"]
     game["gamemode.js<br/>Win32 via koffi, every 3s"]
@@ -143,9 +143,13 @@ anything untouched for 30 min   -> dropped
 
 **Agent lifecycle.** A sproutling is created by the `Agent`/`Task` PreToolUse
 (key `tu:<tool_use_id>`), then *adopted* by the following `SubagentStart` so that
-later events, which carry only `aid`, find it. Background agents (`bg`) outlive
-their tool call; everything else finishes on `PostToolUse`, `SubagentStop` or
-`Stop`. `finish()` → 1.4 s of "done ✓" → puff → `retire()` → moved to
+later events, which carry only `aid`, find it. Every launch is async, so
+`bg` is set on every `Agent`/`Task` call: the tool call returns about a second
+later while the subagent works on for minutes. An agent ends on its own
+`SubagentStop`, matched by `aid` — not when its launch returns (an adopted
+agent, one that has an `aid`, is spared there too), and not on a `SubagentStop`
+naming an `aid` this session never saw, which Claude Code emits once per
+background turn. `finish()` → 1.4 s of "done ✓" → puff → `retire()` → moved to
 `model.history` (last 24), which is why the inspector can still show an agent
 that has just vanished from the notch.
 
@@ -242,13 +246,39 @@ polled every 15 s from the main process and off entirely in game mode. Past thre
 minutes you are away, and `model.totals` is snapshotted; on return the difference
 becomes one spoken line. One line, once — no badge, no list to dismiss.
 
+## Which screen Pip lives on
+
+`placeNotch` follows the work, not the OS: `windows.activeWindow()` reads the
+foreground window and the notch goes to the display holding it
+(`screenTick`, every 1.2 s, two cheap Win32 calls, and it only touches the
+window when the display actually changes). Windows' "primary" display is a
+setting somebody picked once, not a fact about where you are looking.
+
+Three things keep it from fighting you:
+
+- **Pip's own pids are excluded.** Opening Settings makes Pip's window the
+  foreground one, and without the exclusion the notch would anchor itself
+  wherever it already was.
+- **`homeId`, not a display object.** A work area changes under you (a taskbar
+  moving, a resolution change) and an unplugged screen simply leaves the list,
+  so the id is resolved fresh on every placement and falls back to primary.
+- **It stops while suspended**, like every other timer: game mode promises no
+  work, not just no frames.
+
 ## Jumping to the terminal
 
-`resources/hook.js` records `process.ppid`, which is the Claude Code process
-itself. `electron/windows.js` turns that into a window: walk the process tree up
+`resources/hook.js` records `CLAUDE_PID`, the Claude Code process itself
+(`process.ppid` is only the shim Claude Code spawns per hook, which exits at
+once — it is a dead pid by the time anyone clicks, and the walk finds nothing). `electron/windows.js` turns that into a window: walk the process tree up
 from that pid (Toolhelp32, up to 12 hops) and take the closest ancestor that
 owns a visible titled top-level window — Claude Code has no window of its own,
 the terminal hosting it does.
+
+The terminal is carried onto Pip's screen first (`moveToArea`), because being
+raised on a monitor you are not looking at is the same as not being raised. A
+window already on that display is left exactly where you put it; a maximized one
+is restored, moved, and maximized again, since `SetWindowPos` on a maximized
+window moves its *restored* bounds and leaves it filling the old screen.
 
 Raising it is the part Windows is allowed to refuse. Pip's notch is deliberately
 not focusable, so it is usually not the foreground app, and `SetForegroundWindow`

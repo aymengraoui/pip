@@ -110,7 +110,9 @@ export function snapshot() {
     state: it.state,
     stateLabel: state.label,
     accent: state.accent,
-    background: agent ? !!it.bg : false,
+    // Every agent runs in the background now, so saying so distinguishes
+    // nothing; the panel keeps the field but never shows the tag.
+    background: false,
     pid: it.pid || 0,
     stuck: live ? checkStuck(it) : null,
     desc: agent ? it.desc : it.prompt || "",

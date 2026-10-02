@@ -248,8 +248,10 @@ export function apply(e, quiet) {
       if (e.ev === "PostToolUseFailure") totals.failures++;
       if (AGENT_TOOLS.has(e.tool)) {
         const m = agents.get("tu:" + e.tuid);
-        // A background agent keeps working after its tool call returns.
-        if (m && !m.bg) finish(m, quiet, e.t);
+        // A background agent keeps working after its tool call returns, and
+        // so does one SubagentStart has already adopted: an aid proves it is
+        // live, which also stops pre-bg log lines retiring it on replay.
+        if (m && !m.bg && !m.aid) finish(m, quiet, e.t);
       }
       break;
     case "PermissionRequest":
@@ -294,8 +296,11 @@ export function apply(e, quiet) {
       break;
     }
     case "SubagentStop": {
-      const m = (e.aid && findAgent((x) => x.aid === e.aid))
-             || findAgent((x) => x.sid === sid && !x.aid && x.state !== "done");
+      // A stop naming an aid we never saw is not ours: Claude Code emits one
+      // per background turn. Only an aid-less stop falls back to the session.
+      const m = e.aid
+        ? findAgent((x) => x.aid === e.aid)
+        : findAgent((x) => x.sid === sid && !x.aid && x.state !== "done");
       if (m) finish(m, quiet, e.t);
       break;
     }

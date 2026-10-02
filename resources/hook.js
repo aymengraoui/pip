@@ -72,9 +72,12 @@ process.stdin.on("end", () => {
       ev: e.hook_event_name || process.argv[2] || "",
       sid: e.session_id || "",
       cwd: e.cwd || "",
-      // Our parent is Claude Code itself. Pip walks up from here to find the
-      // terminal window hosting it, so you can jump straight to the session.
-      pid: process.ppid || 0,
+      // Claude Code's own pid: Pip walks up from here to find the terminal
+      // window hosting the session. `process.ppid` is NOT it — Claude Code
+      // spawns each hook through a shim that exits immediately, so that pid is
+      // already dead when someone clicks "Go to terminal". CLAUDE_PID is the
+      // long-lived process; keep ppid as a fallback for older hosts.
+      pid: Number(process.env.CLAUDE_PID) || process.ppid || 0,
       tool: e.tool_name || "",
       tuid: e.tool_use_id || "",
       detail: summarize(input),
@@ -85,7 +88,10 @@ process.stdin.on("end", () => {
       // Set when the event fires inside a subagent, and on SubagentStart/Stop.
       aid: e.agent_id || "",
       atype: e.agent_type || (spawnsAgent ? input.subagent_type || "general-purpose" : ""),
-      bg: spawnsAgent && input.run_in_background === true,
+      // Every Agent/Task launch is async: the tool call returns at once and the
+      // subagent works on until its SubagentStop. The Agent tool has no
+      // run_in_background, so the launch itself is the signal.
+      bg: spawnsAgent,
     }) + "\n";
 
     fs.appendFileSync(LOG, line);

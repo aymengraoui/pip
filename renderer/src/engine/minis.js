@@ -54,7 +54,7 @@ export function viewOf(m) {
 //   same tool as a neighbour  they drift together
 //   busy (tools per minute)   moves more often
 //   just failed               slumps and stays low, for twenty seconds
-//   running in the background  keeps to the edges, out of the way
+//   (every agent is a background agent now, so nothing keeps to the edges)
 
 const PROFILE_MS = 2000;   // how often a sproutling reconsiders what it is
 const BUSY_RATE = 4;       // tool calls a minute that counts as busy
@@ -78,7 +78,10 @@ function profile(m) {
     busy: calls >= BUSY_RATE,
     failed: !!failedAt && w - failedAt < SULK_MS,
     tool: m.tool || "",
-    edge: !!m.bg,
+    // `bg` is true for every agent now (see CLAUDE.md, agent lifecycle), so it
+    // no longer singles any of them out. ROADMAP #3 has to pick a real signal
+    // for "keep out of the way" before this can mean anything again.
+    edge: false,
   };
   v.profileAt = w;
   return v.profile;

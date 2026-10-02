@@ -12,6 +12,8 @@
 
 const TH32CS_SNAPPROCESS = 0x2;
 const SW_RESTORE = 9;
+const SW_MAXIMIZE = 3;
+const SWP_NOZORDER = 0x4, SWP_NOACTIVATE = 0x10;
 const MAX_HOPS = 12;              // a process tree deeper than this is not ours
 const FLASHW_ALL = 3, FLASHW_TIMERNOFG = 12;
 
@@ -49,6 +51,13 @@ function load() {
     dwTimeout: "uint32",
   });
 
+  koffi.struct("PIP_RECT", {
+    left: "int32",
+    top: "int32",
+    right: "int32",
+    bottom: "int32",
+  });
+
   const EnumWindowsProc = koffi.proto("bool __stdcall PipEnumProc(void *hwnd, intptr_t lparam)");
 
   api = {
@@ -73,6 +82,9 @@ function load() {
     AttachThreadInput: user32.func("bool __stdcall AttachThreadInput(uint32 from, uint32 to, bool attach)"),
     FlashWindowEx: user32.func("bool __stdcall FlashWindowEx(PIP_FLASHWINFO *info)"),
     GetAncestor: user32.func("void * __stdcall GetAncestor(void *hwnd, uint32 flags)"),
+    GetWindowRect: user32.func("bool __stdcall GetWindowRect(void *hwnd, _Inout_ PIP_RECT *rect)"),
+    SetWindowPos: user32.func("bool __stdcall SetWindowPos(void *hwnd, void *after, int x, int y, int cx, int cy, uint32 flags)"),
+    IsZoomed: user32.func("bool __stdcall IsZoomed(void *hwnd)"),
     GetLastInputInfo: user32.func("bool __stdcall GetLastInputInfo(_Inout_ PIP_LASTINPUT *info)"),
     GetTickCount: kernel32.func("uint32 __stdcall GetTickCount()"),
   };
@@ -198,16 +210,81 @@ function raise(hwnd) {
 }
 
 /**
- * Bring the terminal running `pid` to the front.
- * @returns {{ok: boolean, how?: string, title?: string, exe?: string, reason?: string}}
+ * Whoever is in the foreground right now, as { hwnd, pid, x, y, w, h, cx, cy }.
+ * This is how Pip knows which screen you are actually working on: Windows'
+ * "primary" display is a setting, not a fact about where you are looking.
+ *
+ * `skipPids` keeps Pip's own windows out of the answer — the notch is not
+ * focusable, but the Settings panel is, and Pip following itself would pin the
+ * notch wherever it already was. Returns null when there is nothing to point at
+ * (nothing focused, minimised, or an empty rect), and the caller falls back.
  */
-function focusProcess(pid) {
+function activeWindow(skipPids = []) {
+  try {
+    const a = load();
+    const hwnd = a.GetForegroundWindow();
+    if (!hwnd || !a.IsWindowVisible(hwnd) || a.IsIconic(hwnd)) return null;
+    const out = [0];
+    a.GetWindowThreadProcessId(hwnd, out);
+    const pid = Number(out[0]) || 0;
+    if (!pid || skipPids.includes(pid)) return null;
+    const r = { left: 0, top: 0, right: 0, bottom: 0 };
+    if (!a.GetWindowRect(hwnd, r)) return null;
+    const w = r.right - r.left, h = r.bottom - r.top;
+    if (w <= 0 || h <= 0) return null;
+    return { hwnd, pid, x: r.left, y: r.top, w, h,
+      cx: r.left + Math.round(w / 2), cy: r.top + Math.round(h / 2) };
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * Move a window onto `area` (a display's work area), keeping its size where it
+ * fits and centring it there. A window already on that screen is left exactly
+ * where the user put it.
+ *
+ * A maximized window is restored first and maximized again afterwards:
+ * SetWindowPos on a maximized window moves its *restored* bounds and leaves it
+ * filling the old screen.
+ */
+function moveToArea(hwnd, area) {
+  const a = load();
+  const r = { left: 0, top: 0, right: 0, bottom: 0 };
+  if (!a.GetWindowRect(hwnd, r)) return false;
+  const cx = r.left + (r.right - r.left) / 2, cy = r.top + (r.bottom - r.top) / 2;
+  const inside = cx >= area.x && cx < area.x + area.width &&
+                 cy >= area.y && cy < area.y + area.height;
+  if (inside) return false;
+
+  const w = Math.min(r.right - r.left, area.width);
+  const h = Math.min(r.bottom - r.top, area.height);
+  if (w <= 0 || h <= 0) return false;
+  const zoomed = a.IsZoomed(hwnd);
+  if (zoomed) a.ShowWindow(hwnd, SW_RESTORE);
+  a.SetWindowPos(hwnd, null,
+    Math.round(area.x + (area.width - w) / 2),
+    Math.round(area.y + (area.height - h) / 2),
+    w, h, SWP_NOZORDER | SWP_NOACTIVATE);
+  if (zoomed) a.ShowWindow(hwnd, SW_MAXIMIZE);
+  return true;
+}
+
+/**
+ * Bring the terminal running `pid` to the front. Given `area`, the display
+ * Pip is living on, the terminal is carried over to that screen first — being
+ * raised on a monitor you are not looking at is the same as not being raised.
+ * @returns {{ok: boolean, how?: string, title?: string, exe?: string, moved?: boolean, reason?: string}}
+ */
+function focusProcess(pid, area = null) {
   if (!pid) return { ok: false, reason: "no process recorded for that session" };
   try {
     const target = windowFor(pid);
     if (!target) return { ok: false, reason: "that session's terminal is gone" };
+    let moved = false;
+    if (area) { try { moved = moveToArea(target.hwnd, area); } catch { moved = false; } }
     const how = raise(target.hwnd);
-    return { ok: how !== "refused", how, title: target.title, exe: target.exe };
+    return { ok: how !== "refused", how, moved, title: target.title, exe: target.exe };
   } catch (err) {
     return { ok: false, reason: err.message };
   }
@@ -241,7 +318,7 @@ function alive(pid) {
   }
 }
 
-module.exports = { focusProcess, windowFor, alive, idleSeconds };
+module.exports = { focusProcess, windowFor, activeWindow, alive, idleSeconds };
 
 if (require.main === module) {
   const pid = Number(process.argv[2] || process.ppid);
@@ -251,5 +328,6 @@ if (require.main === module) {
   console.log(`pid ${pid} -> chain ${ancestors(pid).join(" -> ")}`);
   console.log("window:", target, `(${ms.toFixed(1)} ms)`);
   console.log("idle:", idleSeconds(), "s");
+  console.log("foreground:", activeWindow());
   if (process.argv[3] === "--focus" && target) console.log("raise:", raise(target.hwnd));
 }

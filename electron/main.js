@@ -53,9 +53,46 @@ function load(win) {
   return win.loadFile(path.join(__dirname, "..", "dist", "index.html"), process.env.PIP_DEBUG === "1" ? { query: { debug: "1" } } : undefined);
 }
 
+// The display Pip lives on, by id rather than by object: a display's workArea
+// changes under it (a taskbar moving, a resolution change) and an unplugged
+// screen simply stops being in the list, which falls back to primary on its own.
+let homeId = null;
+
+/**
+ * The screen you are actually working on, which is the one holding the window
+ * in the foreground. Windows' "primary" display is a setting somebody picked
+ * once, not a fact about where you are looking, so Pip follows the work.
+ *
+ * Pip's own pids are excluded or the notch would anchor itself wherever it
+ * already was, every time you opened Settings.
+ */
+function activeDisplay() {
+  const fg = windows.activeWindow(app.getAppMetrics().map((m) => m.pid));
+  return fg ? screen.getDisplayNearestPoint({ x: fg.cx, y: fg.cy }) : screen.getPrimaryDisplay();
+}
+
+/** The work area Pip is placed in, resolved fresh every time. */
+function homeArea() {
+  const found = screen.getAllDisplays().find((d) => d.id === homeId);
+  return (found || screen.getPrimaryDisplay()).workArea;
+}
+
 function placeNotch() {
-  const { workArea } = screen.getPrimaryDisplay();
+  const workArea = homeArea();
   notch.setBounds({ x: Math.round(workArea.x + (workArea.width - W) / 2), y: workArea.y, width: W, height: winH });
+}
+
+/**
+ * Follow the work between screens. Two cheap Win32 calls, and it only touches
+ * the window when the display actually changes, so alt-tabbing around one
+ * screen costs nothing. Off entirely while suspended, like every other timer.
+ */
+function screenTick() {
+  if (notch && !notch.isDestroyed()) {
+    const d = activeDisplay();
+    if (d && d.id !== homeId) { homeId = d.id; placeNotch(); }
+  }
+  timers.screen = setTimeout(screenTick, 1200);
 }
 
 function createNotch() {
@@ -132,6 +169,7 @@ function applyRunState(info = {}) {
   if (suspended()) {
     clearTimeout(timers.cursor);
     clearTimeout(timers.idle);
+    clearTimeout(timers.screen);
     clearInterval(timers.tail);
     if (focusable) setFocusable(false);
     send("pause", true);
@@ -147,6 +185,8 @@ function applyRunState(info = {}) {
     cursorTick();
     clearTimeout(timers.idle);
     idleTick();
+    clearTimeout(timers.screen);
+    screenTick();
   }
   updateTray(info);
   send("state", publicState());
@@ -183,7 +223,7 @@ function updateTray(info = {}) {
     ...(update.status === "ready"
       ? [{ label: `Restart to update to ${update.version}`, click: () => updater.install() }, { type: "separator" }]
       : []),
-    ...(waitingPid ? [{ label: "Review what Claude is asking", click: () => windows.focusProcess(waitingPid) }, { type: "separator" }] : []),
+    ...(waitingPid ? [{ label: "Review what Claude is asking", click: () => windows.focusProcess(waitingPid, homeArea()) }, { type: "separator" }] : []),
     { label: "Activity", click: () => openPanel("inspect") },
     { label: "Settings", click: () => openPanel("settings") },
     { label: demoRunning ? "Stop the demo" : "Demo (play every state)", click: () => send("demo") },
@@ -277,7 +317,9 @@ ipcMain.handle("hooks:write", (_e, install) => {
   return r;
 });
 /** Bring the terminal running a session to the front. */
-ipcMain.handle("session:focus", (_e, pid) => windows.focusProcess(Number(pid) || 0));
+// Carry the terminal onto Pip's screen: raising it on a monitor you are not
+// looking at is indistinguishable from not raising it.
+ipcMain.handle("session:focus", (_e, pid) => windows.focusProcess(Number(pid) || 0, homeArea()));
 ipcMain.handle("update:check", async () => {
   await updater.check(true);
   const s = publicState();
@@ -301,7 +343,10 @@ app.whenReady().then(() => {
   hooks.ensureHookFile();
   createNotch();
   createTray();
-  screen.on("display-metrics-changed", placeNotch);
+  // A layout change can move the work area out from under us, or take the
+  // screen away entirely: re-resolve rather than trusting the old id.
+  screen.on("display-metrics-changed", () => { homeId = activeDisplay().id; placeNotch(); });
+  screen.on("display-removed", () => { homeId = activeDisplay().id; placeNotch(); });
   // Nothing is checked while a game is running or Pip is paused.
   updater.init({
     canCheck: () => !suspended(),

@@ -175,8 +175,9 @@ function drawAgentRow(m, y, right) {
   const doing = m.state === "done" ? "done ✓"
     : m.tool ? `${m.tool}${m.toolDetail ? " " + m.toolDetail : ""}`
     : m.desc || "working";
-  const tag = m.bg ? " · background" : "";
-  ctx.fillText(fit(doing + tag, right - (L.x + 56 + nw)), L.x + 56 + nw, y);
+  // No " · background" tag: every agent is a background agent now, so it
+  // would be on every row and tell you nothing.
+  ctx.fillText(fit(doing, right - (L.x + 56 + nw)), L.x + 56 + nw, y);
 }
 
 /**
@@ -211,7 +212,12 @@ export function drawBubble(t) {
   const bw = ctx.measureText(label).width + 18, bh = 24;
   // Close enough that the tail can bridge the gap and touch whoever is talking:
   // a bubble floating under the notch reads as the notch talking, not Pip.
-  const under = speaker.y + speaker.r + 9;
+  // Pip lives inside the notch, so 9px under its chin is exactly the frame's
+  // bottom edge and the bubble never looks attached to it. 1px tucks it up
+  // under the chin instead, overlapping the frame: the bubble draws last, so
+  // it sits over the notch. A hovered sproutling is out in the open and keeps
+  // the original gap.
+  const under = speaker.y + speaker.r + (hoveredMini ? 9 : 1);
   const by = panelName() ? Math.max(under, L.h.v + 10) : under;
   // The tail stretches up to the speaker, within reason. Too far (a panel has
   // pushed the bubble down the screen) and it is better to have no tail at all.

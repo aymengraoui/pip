@@ -142,7 +142,7 @@ feed([{ ev: "PostToolUse", tool: "Read", res: "120 lines" }]);
 feed([
   { ev: "PreToolUse", tool: "Agent", tuid: "t1", atype: "Explore", detail: "find the theme" },
   { ev: "SubagentStart", aid: "a1", atype: "Explore" },
-  { ev: "PreToolUse", tool: "Agent", tuid: "t2", atype: "Plan", detail: "plan it", run_in_background: true },
+  { ev: "PreToolUse", tool: "Agent", tuid: "t2", atype: "Plan", detail: "plan it", bg: true },
   { ev: "SubagentStart", aid: "a2", atype: "Plan" },
 ]);
 advance(600);
@@ -430,6 +430,36 @@ check("napping asks for the slowest frame rate", stats.want <= 12, String(stats.
 feed([{ ev: "SessionStart" }, { ev: "UserPromptSubmit", msg: "old news" }], true);
 advance(200);
 check("a replay still updates the model", sessions.size === 1);
+
+// -- a launch returning is not an agent finishing -----------------------------
+// Regression: every Agent launch is async, so PostToolUse lands a second after
+// PreToolUse while the subagent works on for minutes. Claude Code also emits a
+// SubagentStop per background turn, naming an agent this session never saw.
+
+const sidbg = "smoke-bg";
+const feedbg = (events) => engine.ingest({ events: events.map((e) => ({ t: Date.now(), sid: sidbg, cwd, ...e })), replay: false });
+const livebg = () => [...agents.values()].filter((m) => m.sid === sidbg && m.state !== "done").length;
+
+feedbg([
+  { ev: "SessionStart" },
+  { ev: "PreToolUse", tool: "Agent", tuid: "bg1", atype: "general-purpose", detail: "long job", bg: true },
+  { ev: "SubagentStart", aid: "abg1", atype: "general-purpose" },
+  { ev: "PostToolUse", tool: "Agent", tuid: "bg1", atype: "general-purpose", bg: true },
+]);
+advance(200);
+check("a background agent outlives its own tool call", livebg() === 1, String(livebg()));
+
+feedbg([{ ev: "SubagentStop", aid: "a-never-started" }]);
+advance(200);
+check("a stop for an agent we never saw leaves it alone", livebg() === 1, String(livebg()));
+
+feedbg([{ ev: "Stop" }]);
+advance(200);
+check("the parent turn ending does not end it either", livebg() === 1, String(livebg()));
+
+feedbg([{ ev: "SubagentStop", aid: "abg1" }]);
+advance(200);
+check("its own SubagentStop does", livebg() === 0, String(livebg()));
 
 console.log(failures ? `\n${failures} check(s) failed` : "\nall checks passed");
 process.exit(failures ? 1 : 0);
