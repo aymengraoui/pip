@@ -48,6 +48,16 @@ button { font: inherit; }
 .hint.bad { color: var(--bad); }
 
 .settings { display: flex; flex-direction: column; }
+.s-tabs {
+  display: flex; gap: 3px; padding: 3px; margin-bottom: 4px; flex: none;
+  background: var(--surface); border: 1px solid var(--line); border-radius: 10px;
+}
+.s-tabs button {
+  flex: 1; border: 0; border-radius: 7px; padding: 4px 8px; background: transparent;
+  color: var(--muted); cursor: pointer; transition: background 120ms, color 120ms;
+}
+.s-tabs button:hover { color: var(--text); }
+.s-tabs button.on { background: var(--hover); color: var(--text); font-weight: 600; }
 .s-row { display: flex; align-items: center; gap: 12px; padding: 9px 2px; border-bottom: 1px solid var(--line); cursor: pointer; }
 .s-row.static { cursor: default; }
 .s-text { flex: 1; min-width: 0; }
