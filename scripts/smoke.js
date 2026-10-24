@@ -430,6 +430,10 @@ check("every colour, accessory and theme draws", lookOk);
 engine.setLook({ body: "plaid", accessory: "jetpack", theme: "neon" });
 check("unknown looks fall back to the defaults", getLook().body === "mint" && getLook().accessory === "none" && getLook().theme === "midnight");
 engine.setLook(undefined);
+const before = framesRun;
+for (const accessory of Object.keys(ACCESSORIES)) engine.drawPreview(stubCanvas(), { accessory }, 40);
+advance(200);
+check("drawing a preview leaves the notch drawing", framesRun > before);
 
 // Long quiet stretch: Pip should nap, and still be drawing something.
 advance(300000);

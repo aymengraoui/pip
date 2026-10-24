@@ -16,7 +16,7 @@ import { THEMES } from "../engine/look.js";
 
 const pip = window.pip;
 const PANELS = {
-  settings: { w: 460, h: 480 },
+  settings: { w: 460, h: 520 },
   inspect: { w: 520, h: 420 },
 };
 
@@ -27,6 +27,7 @@ function applyLook(look) {
   const root = document.documentElement.style;
   for (const k of ["surface", "raise", "hover", "line"]) root.setProperty(`--${k}`, th[k]);
   root.setProperty("--muted", th.sub);
+  root.setProperty("--bg", th.bg);
 }
 
 export default function App() {

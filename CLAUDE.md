@@ -323,6 +323,13 @@ focus only because it has a text field.
 
 ## Panels
 
+**Settings has three tabs** (General, Appearance, Claude Code), each a few
+captioned cards (`Section`), sized so no tab scrolls at 520 px; the footer
+(version, update check, Demo, Quit) is sticky. Add a setting to the card it
+belongs with, and if a tab starts to scroll, trim before adding a tab. Picture
+tiles are drawn by the engine (`engine.drawPreview`, via `gfx.drawOn`, which
+borrows `ctx` for the moment and hands it back to the notch).
+
 A panel is React DOM inside the notch, not a second window. `App.jsx` holds
 `panel: null | "settings" | "inspect"`, tells the engine its size
 (`engine.setPanel`), and the engine grows the notch to match and parks the
