@@ -11,6 +11,8 @@ export const host = {
   menu: noop,         // right click: native context menu
   focusSession: noop, // raise the terminal a session is running in
   setWaiting: noop,   // which process is waiting on the user, or 0
+  startDrag: noop,    // a press on the notch: true if the host will follow it as a drag
+  stopDrag: noop,     // the window heard the button come up
 };
 
 export const ui = {

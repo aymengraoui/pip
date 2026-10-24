@@ -69,6 +69,8 @@ export function resizePanel(h) {
   panel.h = next;
 }
 
+export const isPinned = () => pinned;
+
 export function togglePinned() {
   pinned = !pinned;
   if (!pinned) hoverOpen = false;

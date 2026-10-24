@@ -271,6 +271,29 @@ is unplugged the notch follows you instead, and goes back when it reappears
 (`display-added`). The picker only shows with two or more screens, and the
 display events re-send state so it lists what is actually plugged in.
 
+**Along the top, the notch goes where you drag it.** `settings.notchX` is the
+notch's centre as a fraction of the work area's width (0.5, the middle, by
+default), so it survives a resolution change and carries over to whichever
+screen Pip is on; the window is clamped inside the work area. A press on Pip or
+the pill goes to the main process (`drag-start`), which follows the cursor and
+polls `windows.buttonDown()` (GetAsyncKeyState) until the button is up — the
+release can happen anywhere on screen, where the window would never hear it.
+Then `drag-end { moved }` tells the engine whether that press was a click
+(tickle Pip, pin the notch) or a drag. So Pip's tickle and the pill's pin fire
+on release now, not on press. The window stays solid for the whole drag.
+
+The rules that keep it honest:
+
+- **Every `drag-start` gets exactly one `drag-end`, in order** (`endDrag`). The
+  engine queues presses, so a fast double click is two clicks.
+- **Windows can withhold the button state** (an elevated window in front,
+  another desktop). If it doesn't read as down at the start of the press, the
+  drag ends on the window's own `mouseup` (`drag-stop`) instead, with a 15 s
+  backstop.
+- **A drag stays on the screen it started on**, and `screenTick` waits for it.
+- **Nothing drags while a panel is open**, and suspending (game mode, Pause)
+  cancels a drag in progress and puts the notch back.
+
 ## Jumping to the terminal
 
 `resources/hook.js` records `CLAUDE_PID`, the Claude Code process itself
@@ -311,6 +334,7 @@ add `--focus` to actually raise it.
 | a sproutling | open the inspector on that subagent, click again to close | `input.js` → `inspector.toggle` → `ui.onInspect` → `App.openPanel("inspect")` |
 | a row (notch open) | same, for that session or agent | `layout.rowAt` / `rowTarget` |
 | the pill | pin the notch open | `layout.togglePinned` |
+| drag Pip or the pill sideways | move the notch along the top; it snaps back to the middle within 24 px | `input.press` → `main.dragTick` |
 | right click | native menu from the main process | `bridge.host.menu` |
 | Go to terminal (in the panel) | raise the terminal that session runs in | `windows.focusProcess` |
 | Review → (on the notch, while waiting) | the same, one click from anywhere | `layout.review` + `input.js` |

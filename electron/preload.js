@@ -14,11 +14,15 @@ contextBridge.exposeInMainWorld("pip", {
   onPanel: on("panel"),
   onDemo: on("demo"),
   onAway: on("away"),
+  onDragEnd: on("drag-end"),
   setHitRects: (rects) => ipcRenderer.send("hit-rects", rects),
   setWinHeight: (h) => ipcRenderer.send("win-height", h),
   setFocus: (on) => ipcRenderer.send("focus", on),
   setWaiting: (pid) => ipcRenderer.send("waiting", pid),
   setDemo: (on) => ipcRenderer.send("demo-state", on),
+  // True: the main process will follow the drag and answer with "drag-end".
+  startDrag: () => { ipcRenderer.send("drag-start"); return true; },
+  stopDrag: () => ipcRenderer.send("drag-stop"),
   menu: () => ipcRenderer.send("menu"),
   quit: () => ipcRenderer.send("quit"),
 

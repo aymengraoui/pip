@@ -71,6 +71,9 @@ export function sfx(name) { sound.play(name); }
 export function speak(text, dur = 2.2) { speech.say(text, dur); clock.wake(); }
 export function wake() { clock.wake(); }
 
+/** The main process let go of a press on the notch: a click, or a finished drag. */
+export function dragEnded(r) { input.dragEnded(r); }
+
 /** Cursor position from the main process (works during drag-and-drop too). */
 export function setCursor({ x, y }) { input.moveTo(x, y); }
 
