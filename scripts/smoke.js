@@ -12,13 +12,11 @@
 import * as engine from "../renderer/src/engine/index.js";
 import { agents, sessions, history } from "../renderer/src/engine/model.js";
 import { viewOf } from "../renderer/src/engine/minis.js";
-import { L } from "../renderer/src/engine/layout.js";
+import { L, review, isPinned } from "../renderer/src/engine/layout.js";
 import * as watchdog from "../renderer/src/engine/watchdog.js";
-import { review } from "../renderer/src/engine/layout.js";
 import { pip } from "../renderer/src/engine/pip.js";
 import * as gfx from "../renderer/src/engine/gfx.js";
 import { host } from "../renderer/src/engine/bridge.js";
-import { isPinned } from "../renderer/src/engine/layout.js";
 import { ACCESSORIES, BODIES, KINDS, THEMES, get as getLook } from "../renderer/src/engine/look.js";
 
 // -- virtual clock, so 10 minutes of Pip take 20 ms ---------------------------
@@ -412,10 +410,26 @@ advance(200);
   engine.dragEnded({ moved: false });
   advance(50);
   check("a press that didn't move is a click", isPinned() !== was);
+  // A fast double click: both presses before either answer. Two clicks.
+  const now = isPinned();
+  canvas.fire("mousedown", { button: 0, clientX: L.x + L.w.v - 30, clientY: 10 });
+  canvas.fire("mousedown", { button: 0, clientX: L.x + L.w.v - 30, clientY: 10 });
+  engine.dragEnded({ moved: false });
+  engine.dragEnded({ moved: false });
+  check("a fast double click is two clicks", isPinned() === now);
   if (isPinned() !== was) {
     canvas.fire("mousedown", { button: 0, clientX: L.x + L.w.v - 30, clientY: 10 });
     engine.dragEnded({ moved: false });
   }
+  // With a panel open the pill doesn't start a drag at all.
+  let asked = 0;
+  host.startDrag = () => { asked++; return true; };
+  engine.setPanel("settings", { w: 460, h: 300 });
+  advance(600);
+  canvas.fire("mousedown", { button: 0, clientX: L.x + L.w.v - 30, clientY: 10 });
+  check("nothing drags while a panel is open", asked === 0);
+  engine.setPanel(null);
+  advance(600);
   host.startDrag = plain;
 }
 

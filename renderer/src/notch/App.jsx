@@ -62,7 +62,7 @@ export default function App() {
   useEffect(() => {
     engine.init(
       canvasRef.current,
-      { setHitRects: pip.setHitRects, setWinHeight: pip.setWinHeight, menu: pip.menu, focusSession: pip.focusSession, setWaiting: pip.setWaiting, startDrag: pip.startDrag },
+      { setHitRects: pip.setHitRects, setWinHeight: pip.setWinHeight, menu: pip.menu, focusSession: pip.focusSession, setWaiting: pip.setWaiting, startDrag: pip.startDrag, stopDrag: pip.stopDrag },
       {
         onLayout: setLayout,
         onInspect: (target) => (target ? openPanel("inspect") : closePanel()),

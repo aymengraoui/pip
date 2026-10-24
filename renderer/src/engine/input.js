@@ -49,23 +49,26 @@ function review(pid) {
     .catch(() => {});
 }
 
-/** What a press on Pip or the pill will do if it turns out to be a click. */
-let pressed = null;
+/**
+ * Presses waiting on the host's answer, oldest first: what each will do if it
+ * turns out to be a click. The host answers every press once, in order, so a
+ * fast double click is still two clicks.
+ */
+const pending = [];
 
 function press(what) {
-  pressed = what;
+  pending.push(what);
   // A host that can't follow drags (tests, older builds) gets plain clicks.
   if (!host.startDrag()) dragEnded({ moved: false });
 }
 
 /** The main process has let go of a press: a click, or the end of a drag. */
 export function dragEnded({ moved } = {}) {
-  const what = pressed;
-  pressed = null;
+  const what = pending.shift();
   wake();
   if (moved || !what) return;
   if (what === "pip") poke();
-  else if (!layout.panelName()) layout.togglePinned();
+  else layout.togglePinned();
 }
 
 function onDown(e) {
@@ -81,6 +84,8 @@ function onDown(e) {
     // you", not "tickle me". It gets the stage back and the panel shows its
     // session.
     if (isAside()) { show(inspector.ownerTarget()); return; }
+    // With a panel open the notch stays put: a plain tickle, as before.
+    if (layout.panelName()) { poke(); wake(); return; }
     press("pip");
     return;
   }
@@ -91,11 +96,15 @@ function onDown(e) {
   const row = layout.rowAt(x, y);
   if (row >= 0) { show(layout.rowTarget(row)); return; }
 
-  press("pill");
+  // And a press on the pill does nothing while a panel is open.
+  if (!layout.panelName()) press("pill");
 }
 
 export function attach(canvas) {
   window.addEventListener("mousemove", (e) => moveTo(e.clientX, e.clientY));
   canvas.addEventListener("mousedown", onDown);
+  // The other way the host learns a press is over, for when Windows won't
+  // report the button. Only while one is pending, so it costs nothing else.
+  window.addEventListener("mouseup", (e) => { if (e.button === 0 && pending.length) host.stopDrag(); });
   canvas.addEventListener("contextmenu", (e) => { e.preventDefault(); host.menu(isMuted()); });
 }

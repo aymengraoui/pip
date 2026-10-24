@@ -22,6 +22,7 @@ contextBridge.exposeInMainWorld("pip", {
   setDemo: (on) => ipcRenderer.send("demo-state", on),
   // True: the main process will follow the drag and answer with "drag-end".
   startDrag: () => { ipcRenderer.send("drag-start"); return true; },
+  stopDrag: () => ipcRenderer.send("drag-stop"),
   menu: () => ipcRenderer.send("menu"),
   quit: () => ipcRenderer.send("quit"),
 

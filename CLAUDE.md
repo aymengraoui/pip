@@ -282,6 +282,18 @@ Then `drag-end { moved }` tells the engine whether that press was a click
 (tickle Pip, pin the notch) or a drag. So Pip's tickle and the pill's pin fire
 on release now, not on press. The window stays solid for the whole drag.
 
+The rules that keep it honest:
+
+- **Every `drag-start` gets exactly one `drag-end`, in order** (`endDrag`). The
+  engine queues presses, so a fast double click is two clicks.
+- **Windows can withhold the button state** (an elevated window in front,
+  another desktop). If it doesn't read as down at the start of the press, the
+  drag ends on the window's own `mouseup` (`drag-stop`) instead, with a 15 s
+  backstop.
+- **A drag stays on the screen it started on**, and `screenTick` waits for it.
+- **Nothing drags while a panel is open**, and suspending (game mode, Pause)
+  cancels a drag in progress and puts the notch back.
+
 ## Jumping to the terminal
 
 `resources/hook.js` records `CLAUDE_PID`, the Claude Code process itself
