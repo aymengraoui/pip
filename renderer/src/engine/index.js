@@ -164,9 +164,9 @@ export const demoRunning = () => demoScript.isRunning();
 
 /** A still of Pip in some look, for the picture tiles in Settings. */
 export function drawPreview(el, l, size) {
-  const full = { ...look.get(), ...l };
+  const full = look.clean({ ...look.get(), ...l });
   gfx.drawOn(el, size, () => creature.draw(size / 2, size * 0.6, size / 40, {
-    pal: look.BODIES[full.body] || look.BODIES.mint, t: 0, sx: 1, sy: 1, rot: 0, look: { x: 0, y: 0.1 }, open: 1,
+    pal: look.BODIES[full.body], t: 0, sx: 1, sy: 1, rot: 0, look: { x: 0, y: 0.1 }, open: 1,
     eyes: "normal", mouth: "smile", blush: full.cheeks ? 0.6 : 0.3, prop: false, leafSpin: 0, leafAngle: 0.1, walk: false,
     accessory: full.accessory, kind: full.kind,
   }));

@@ -112,7 +112,7 @@ button { font: inherit; }
   font-size: 11px; cursor: pointer; transition: background 120ms, border-color 120ms;
 }
 .tile:hover { background: var(--hover); color: var(--text); }
-.tile.on { border-color: #3B5F52; background: #1C2A25; color: var(--text); }
+.tile.on { border-color: var(--mint); background: var(--hover); color: var(--text); }
 .tile span { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 100%; }
 canvas.preview { position: static; }
 

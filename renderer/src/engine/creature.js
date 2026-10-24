@@ -96,7 +96,7 @@ export function draw(x, y, s, o) {
   critters.snout(kind, o, R, s);
   drawMouth(o, R, ry, s, face, mouth);
   ctx.restore();
-  if (o.accessory === "glasses") drawGlasses(R, rx, ry, s);
+  if (o.accessory === "glasses") drawGlasses(R, rx, ry, s, face);
   ctx.restore();
 }
 
@@ -214,10 +214,10 @@ function drawAccessory(kind, R, rx, ry, s, creature) {
 }
 
 /** Round glasses, over the eyes so they still blink and look around behind them. */
-function drawGlasses(R, rx, ry, s) {
+function drawGlasses(R, rx, ry, s, face) {
   const ex = rx * 0.38, ey = -ry * 0.08, r = R * 0.34;
   ctx.save();
-  ctx.strokeStyle = INK;
+  ctx.strokeStyle = face.ink;
   ctx.lineWidth = Math.max(1, 1.5 * s);
   ctx.fillStyle = "rgba(255,255,255,0.14)";
   for (const side of [-1, 1]) {

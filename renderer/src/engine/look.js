@@ -54,21 +54,31 @@ export const THEMES = {
   cocoa:    { name: "Cocoa",    bg: "#170F0B", surface: "#231914", raise: "#2B1F19", hover: "#372820", line: "#3E2E25", sub: "#BCA595" },
 };
 
+// Keep in step with DEFAULTS.look in electron/store.js: the main process can't
+// import this module, so the defaults are written down in both places.
 export const DEFAULT_LOOK = { kind: "sprout", body: "mint", accessory: "none", cheeks: false, theme: "midnight" };
 
 let current = DEFAULT_LOOK;
 
-/** Take whatever settings.json says, ignoring names this version doesn't know. */
-export function set(look) {
+// Own keys only: `in` would let "constructor" or "toString" through.
+const known = (list, name, fallback) => (typeof name === "string" && Object.hasOwn(list, name) ? name : fallback);
+
+/**
+ * Whatever settings.json says, with names this version doesn't know swapped for
+ * the defaults. Settings reads this too, so it shows what is actually drawn.
+ */
+export function clean(look) {
   const l = { ...DEFAULT_LOOK, ...(look || {}) };
-  current = {
-    kind: l.kind in KINDS ? l.kind : DEFAULT_LOOK.kind,
-    body: l.body in BODIES ? l.body : DEFAULT_LOOK.body,
-    accessory: l.accessory in ACCESSORIES ? l.accessory : DEFAULT_LOOK.accessory,
+  return {
+    kind: known(KINDS, l.kind, DEFAULT_LOOK.kind),
+    body: known(BODIES, l.body, DEFAULT_LOOK.body),
+    accessory: known(ACCESSORIES, l.accessory, DEFAULT_LOOK.accessory),
     cheeks: !!l.cheeks,
-    theme: l.theme in THEMES ? l.theme : DEFAULT_LOOK.theme,
+    theme: known(THEMES, l.theme, DEFAULT_LOOK.theme),
   };
 }
+
+export function set(look) { current = clean(look); }
 
 export const get = () => current;
 export const body = () => BODIES[current.body];

@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import * as engine from "../engine/index.js";
-import { ACCESSORIES, BODIES, DEFAULT_LOOK, KINDS, THEMES } from "../engine/look.js";
+import { ACCESSORIES, BODIES, KINDS, THEMES, clean as cleanLook } from "../engine/look.js";
 
 const pip = window.pip;
 const clean = (err) => String(err?.message || err).replace(/^Error invoking remote method '[^']+': (Error: )?/, "");
@@ -70,7 +70,7 @@ function ScreenPicker({ displays, value, onChange }) {
 /** A still of Pip in some look, drawn by the engine itself. */
 function Preview({ look, size = 32 }) {
   const ref = useRef(null);
-  const key = JSON.stringify(look);
+  const key = `${look.kind}/${look.body}/${look.accessory}/${look.cheeks}`;
   useEffect(() => { if (ref.current) engine.drawPreview(ref.current, look, size); }, [key, size]);
   return <canvas ref={ref} className="preview" style={{ width: size, height: size }} />;
 }
@@ -87,7 +87,7 @@ function Tile({ on, name, look, onClick }) {
 
 /** What Pip is, its colour, accessory, cheeks and the notch theme. Pip above is the live preview. */
 function Appearance({ look, onChange }) {
-  const l = { ...DEFAULT_LOOK, ...look };
+  const l = cleanLook(look);
   return (
     <>
       <Section title="Creature">
@@ -228,9 +228,10 @@ export default function Settings({ state, demoOn, onDemo, onStopDemo }) {
             <div className="s-row static">
               <div className="s-text">
                 <div>Hooks</div>
-                <div className={`hint ${msg ? (msg.ok ? "ok" : "bad") : state.hooks.installed ? "ok" : "bad"}`}>
-                  {msg ? msg.text : state.hooks.installed ? "Installed" : state.hooks.error || "Not installed: Pip can't see your sessions"}
+                <div className={`hint ${state.hooks.installed ? "ok" : "bad"}`}>
+                  {state.hooks.installed ? "Installed" : state.hooks.error || "Not installed: Pip can't see your sessions"}
                 </div>
+                {msg && <div className={`hint ${msg.ok ? "" : "bad"}`}>{msg.text}</div>}
               </div>
               <div className="s-actions">
                 <button className="btn" onClick={() => hooks(true)}>{state.hooks.installed ? "Reinstall" : "Install"}</button>

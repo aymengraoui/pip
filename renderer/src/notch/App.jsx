@@ -12,7 +12,7 @@ import * as engine from "../engine/index.js";
 import Settings from "./Settings.jsx";
 import Inspector from "./Inspector.jsx";
 import { CloseIcon, GearIcon } from "../shared/icons.jsx";
-import { THEMES } from "../engine/look.js";
+import { THEMES, clean as cleanLook } from "../engine/look.js";
 
 const pip = window.pip;
 const PANELS = {
@@ -23,7 +23,7 @@ const PANELS = {
 /** Hand the look to the engine (the canvas) and to CSS (the panels). */
 function applyLook(look) {
   engine.setLook(look);
-  const th = THEMES[look?.theme] || THEMES.midnight;
+  const th = THEMES[cleanLook(look).theme];
   const root = document.documentElement.style;
   for (const k of ["surface", "raise", "hover", "line"]) root.setProperty(`--${k}`, th[k]);
   root.setProperty("--muted", th.sub);

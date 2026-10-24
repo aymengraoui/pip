@@ -316,14 +316,15 @@ export function face(t) {
 
 export function draw(t) {
   const look = face(t);
+  const lk = lookMod.get();
   const shake = pip.shake > 0 ? Math.sin(t * 45) * 0.18 * pip.shake : 0;
   const tilt = mood === "thinking" ? Math.sin(t * 1.4) * 0.08 : mood === "working" ? Math.sin(t * 5) * 0.05 : 0;
   creature.draw(pip.x, pip.y, pip.s * pip.intro.v, {
-    pal: lookMod.body(), t, accessory: lookMod.get().accessory, kind: lookMod.get().kind,
+    pal: lookMod.BODIES[lk.body], t, accessory: lk.accessory, kind: lk.kind,
     sx: pip.sx.v * Math.cos(pip.spin), sy: pip.sy.v,
     rot: shake + tilt,
     look: { x: pip.lookX.v, y: pip.lookY.v }, open: pip.open.v,
-    eyes: look.eyes, mouth: look.mouth, blush: lookMod.get().cheeks ? Math.max(0.6, pip.blush.v) : pip.blush.v,
+    eyes: look.eyes, mouth: look.mouth, blush: lk.cheeks ? Math.max(0.6, pip.blush.v) : pip.blush.v,
     prop: mood === "working" || pip.current() === "proud",
     leafSpin: pip.leafSpin, leafAngle: pip.leafAngle,
     walk: mood === "working",
