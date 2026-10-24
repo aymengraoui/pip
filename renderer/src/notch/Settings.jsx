@@ -27,6 +27,29 @@ function updateHint(u) {
   }
 }
 
+/** Follow the work, or stay on one screen. Only worth showing with more than one. */
+function ScreenPicker({ displays, value, onChange }) {
+  if (displays.length < 2) return null;
+  const pinned = displays.find((d) => d.id === value);
+  const hint = value === "follow"
+    ? "Pip moves to the screen you are working on"
+    : pinned ? `Pip stays on ${pinned.name}` : "That screen is unplugged, so Pip follows you until it's back";
+  return (
+    <div className="s-field">
+      <div>Screen</div>
+      <div className="hint">{hint}</div>
+      <div className="s-choices">
+        <button className={`btn ${value === "follow" ? "on" : ""}`} onClick={() => onChange("follow")}>Follow my work</button>
+        {displays.map((d) => (
+          <button key={d.id} className={`btn ${value === d.id ? "on" : ""}`} title={d.size} onClick={() => onChange(d.id)}>
+            {d.name}{d.primary ? " (main)" : ""}
+          </button>
+        ))}
+      </div>
+    </div>
+  );
+}
+
 export default function Settings({ state, demoOn, onDemo, onStopDemo }) {
   const s = state.settings;
   const u = state.update || { status: "idle", current: state.version };
@@ -60,6 +83,7 @@ export default function Settings({ state, demoOn, onDemo, onStopDemo }) {
         on={s.recordResults}
         onChange={(on) => set({ recordResults: on })}
       />
+      <ScreenPicker displays={state.displays || []} value={s.screen} onChange={(screen) => set({ screen })} />
       <Toggle
         label="Game mode"
         hint={state.gaming ? "A game is running: Pip is asleep" : "Hide and use no CPU while a game is running"}

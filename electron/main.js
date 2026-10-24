@@ -71,6 +71,27 @@ function activeDisplay() {
   return fg ? screen.getDisplayNearestPoint({ x: fg.cx, y: fg.cy }) : screen.getPrimaryDisplay();
 }
 
+/** The screen you pinned Pip to in Settings, if it is still plugged in. */
+function pinnedDisplay() {
+  const pin = store.settings.get().screen;
+  if (pin === "follow") return null;
+  return screen.getAllDisplays().find((d) => d.id === pin) || null;
+}
+
+/** Where the notch should be: the pinned screen, else wherever you are working. */
+function targetDisplay() { return pinnedDisplay() || activeDisplay(); }
+
+/** The screens Pip can see, for the picker in Settings. */
+function displayList() {
+  const primary = screen.getPrimaryDisplay().id;
+  return screen.getAllDisplays().map((d, i) => ({
+    id: d.id,
+    name: d.label || `Screen ${i + 1}`,
+    size: `${d.size.width}×${d.size.height}`,
+    primary: d.id === primary,
+  }));
+}
+
 /** The work area Pip is placed in, resolved fresh every time. */
 function homeArea() {
   const found = screen.getAllDisplays().find((d) => d.id === homeId);
@@ -89,7 +110,7 @@ function placeNotch() {
  */
 function screenTick() {
   if (notch && !notch.isDestroyed()) {
-    const d = activeDisplay();
+    const d = targetDisplay();
     if (d && d.id !== homeId) { homeId = d.id; placeNotch(); }
   }
   timers.screen = setTimeout(screenTick, 1200);
@@ -267,6 +288,7 @@ function publicState() {
     gaming,
     update: updater.status(),
     version: app.getVersion(),
+    displays: displayList(),
   };
 }
 
@@ -307,6 +329,8 @@ ipcMain.on("quit", () => app.quit());
 ipcMain.handle("state", () => publicState());
 ipcMain.handle("settings:set", (_e, patch) => {
   store.settings.set(patch);
+  // Pinning (or unpinning) moves the notch now, not on the next tick.
+  if (patch && "screen" in patch && notch && !notch.isDestroyed()) { homeId = targetDisplay().id; placeNotch(); }
   const s = publicState();
   send("state", s);
   return s;
@@ -344,9 +368,13 @@ app.whenReady().then(() => {
   createNotch();
   createTray();
   // A layout change can move the work area out from under us, or take the
-  // screen away entirely: re-resolve rather than trusting the old id.
-  screen.on("display-metrics-changed", () => { homeId = activeDisplay().id; placeNotch(); });
-  screen.on("display-removed", () => { homeId = activeDisplay().id; placeNotch(); });
+  // screen away entirely: re-resolve rather than trusting the old id. A pinned
+  // screen that is unplugged falls back to following you, and comes back when
+  // it is plugged in again. Settings hears about it so the picker stays true.
+  const relayout = () => { homeId = targetDisplay().id; placeNotch(); send("state", publicState()); };
+  screen.on("display-metrics-changed", relayout);
+  screen.on("display-removed", relayout);
+  screen.on("display-added", relayout);
   // Nothing is checked while a game is running or Pip is paused.
   updater.init({
     canCheck: () => !suspended(),

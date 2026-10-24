@@ -265,6 +265,12 @@ Three things keep it from fighting you:
 - **It stops while suspended**, like every other timer: game mode promises no
   work, not just no frames.
 
+You can opt out in Settings → Screen: `settings.screen` is `"follow"` (the
+default) or a display id. A pinned id wins in `targetDisplay()`; if that screen
+is unplugged the notch follows you instead, and goes back when it reappears
+(`display-added`). The picker only shows with two or more screens, and the
+display events re-send state so it lists what is actually plugged in.
+
 ## Jumping to the terminal
 
 `resources/hook.js` records `CLAUDE_PID`, the Claude Code process itself

@@ -12,6 +12,9 @@ const DEFAULTS = {
   // Read by resources/hook.js, which sits next to this file.
   recordResults: true,
   gameMode: { enabled: true, fullscreen: true, extraExes: [] },
+  // "follow" puts the notch on the screen you are working on; a display id pins
+  // it to that screen for as long as it is plugged in.
+  screen: "follow",
 };
 
 function merge(base, over) {
