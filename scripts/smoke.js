@@ -17,6 +17,8 @@ import * as watchdog from "../renderer/src/engine/watchdog.js";
 import { review } from "../renderer/src/engine/layout.js";
 import { pip } from "../renderer/src/engine/pip.js";
 import * as gfx from "../renderer/src/engine/gfx.js";
+import { host } from "../renderer/src/engine/bridge.js";
+import { isPinned } from "../renderer/src/engine/layout.js";
 import { ACCESSORIES, BODIES, KINDS, THEMES, get as getLook } from "../renderer/src/engine/look.js";
 
 // -- virtual clock, so 10 minutes of Pip take 20 ms ---------------------------
@@ -390,6 +392,32 @@ engine.setCursor({ x: 240, y: 20 });
 advance(1200);
 canvas.fire("mousedown", { button: 0, clientX: 240, clientY: 72 });
 advance(200);
+
+// Dragging the notch along the top: a press waits for the host, and only a
+// press that didn't move is a click.
+{
+  const plain = host.startDrag;
+  host.startDrag = () => true;
+  engine.setPanel(null);
+  engine.setCursor({ x: 600, y: 300 });
+  advance(1500);
+  const was = isPinned();
+  canvas.fire("mousedown", { button: 0, clientX: L.x + L.w.v - 30, clientY: 10 });
+  advance(50);
+  check("a press on the pill waits to see if it is a drag", isPinned() === was);
+  engine.dragEnded({ moved: true });
+  advance(50);
+  check("a drag is not a click", isPinned() === was);
+  canvas.fire("mousedown", { button: 0, clientX: L.x + L.w.v - 30, clientY: 10 });
+  engine.dragEnded({ moved: false });
+  advance(50);
+  check("a press that didn't move is a click", isPinned() !== was);
+  if (isPinned() !== was) {
+    canvas.fire("mousedown", { button: 0, clientX: L.x + L.w.v - 30, clientY: 10 });
+    engine.dragEnded({ moved: false });
+  }
+  host.startDrag = plain;
+}
 
 // Game mode, then the demo, then the icon.
 engine.setPaused(true);

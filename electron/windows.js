@@ -16,6 +16,7 @@ const SW_MAXIMIZE = 3;
 const SWP_NOZORDER = 0x4, SWP_NOACTIVATE = 0x10;
 const MAX_HOPS = 12;              // a process tree deeper than this is not ours
 const FLASHW_ALL = 3, FLASHW_TIMERNOFG = 12;
+const VK_LBUTTON = 0x01, VK_RBUTTON = 0x02, SM_SWAPBUTTON = 23;
 
 let api = null;
 
@@ -87,6 +88,8 @@ function load() {
     IsZoomed: user32.func("bool __stdcall IsZoomed(void *hwnd)"),
     GetLastInputInfo: user32.func("bool __stdcall GetLastInputInfo(_Inout_ PIP_LASTINPUT *info)"),
     GetTickCount: kernel32.func("uint32 __stdcall GetTickCount()"),
+    GetAsyncKeyState: user32.func("int16 __stdcall GetAsyncKeyState(int key)"),
+    GetSystemMetrics: user32.func("int __stdcall GetSystemMetrics(int index)"),
   };
   return api;
 }
@@ -308,6 +311,23 @@ function idleSeconds() {
   }
 }
 
+/**
+ * Is the primary mouse button held down right now, anywhere on screen? This is
+ * how a drag of the notch knows it has ended even when the button comes up
+ * outside Pip's window. GetAsyncKeyState reads the physical buttons, so a
+ * left-handed mouse (swapped buttons) means asking about the right one.
+ * False if the lookup fails, which simply ends the drag.
+ */
+function buttonDown() {
+  try {
+    const a = load();
+    const vk = a.GetSystemMetrics(SM_SWAPBUTTON) ? VK_RBUTTON : VK_LBUTTON;
+    return (a.GetAsyncKeyState(vk) & 0x8000) !== 0;
+  } catch {
+    return false;
+  }
+}
+
 /** Is that process still around? Used to grey out the button. */
 function alive(pid) {
   if (!pid) return false;
@@ -318,7 +338,7 @@ function alive(pid) {
   }
 }
 
-module.exports = { focusProcess, windowFor, activeWindow, alive, idleSeconds };
+module.exports = { focusProcess, windowFor, activeWindow, alive, idleSeconds, buttonDown };
 
 if (require.main === module) {
   const pid = Number(process.argv[2] || process.ppid);

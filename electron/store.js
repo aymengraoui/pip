@@ -15,6 +15,10 @@ const DEFAULTS = {
   // "follow" puts the notch on the screen you are working on; a display id pins
   // it to that screen for as long as it is plugged in.
   screen: "follow",
+  // Where along the top of the screen the notch sits, as a fraction of the work
+  // area's width: 0.5 is the middle. A fraction, so it survives a resolution
+  // change or a move to another screen.
+  notchX: 0.5,
   // What Pip is, its colour, what it wears, rosy cheeks, the notch's theme. Names are
   // the keys in renderer/src/engine/look.js; unknown ones fall back to defaults.
   // Keep in step with DEFAULT_LOOK there.

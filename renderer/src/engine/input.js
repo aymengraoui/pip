@@ -6,6 +6,11 @@
 //   a sproutling   open the inspector on that subagent (click again to close)
 //   a row          open the inspector on that session or subagent
 //   the pill       keep the notch open
+//
+// Pip and the pill can also be dragged left and right along the top of the
+// screen. A press on either is handed to the main process, which follows the
+// cursor while the button is held and then says whether it moved
+// (`dragEnded`): only a press that didn't move counts as a click.
 
 import { move } from "./pointer.js";
 import { wake } from "./clock.js";
@@ -44,6 +49,25 @@ function review(pid) {
     .catch(() => {});
 }
 
+/** What a press on Pip or the pill will do if it turns out to be a click. */
+let pressed = null;
+
+function press(what) {
+  pressed = what;
+  // A host that can't follow drags (tests, older builds) gets plain clicks.
+  if (!host.startDrag()) dragEnded({ moved: false });
+}
+
+/** The main process has let go of a press: a click, or the end of a drag. */
+export function dragEnded({ moved } = {}) {
+  const what = pressed;
+  pressed = null;
+  wake();
+  if (moved || !what) return;
+  if (what === "pip") poke();
+  else if (!layout.panelName()) layout.togglePinned();
+}
+
 function onDown(e) {
   if (e.button !== 0) return;
   const x = e.clientX, y = e.clientY;
@@ -57,8 +81,7 @@ function onDown(e) {
     // you", not "tickle me". It gets the stage back and the panel shows its
     // session.
     if (isAside()) { show(inspector.ownerTarget()); return; }
-    poke();
-    wake();
+    press("pip");
     return;
   }
 
@@ -68,7 +91,7 @@ function onDown(e) {
   const row = layout.rowAt(x, y);
   if (row >= 0) { show(layout.rowTarget(row)); return; }
 
-  if (!layout.panelName()) { layout.togglePinned(); wake(); }
+  press("pill");
 }
 
 export function attach(canvas) {

@@ -98,9 +98,52 @@ function homeArea() {
   return (found || screen.getPrimaryDisplay()).workArea;
 }
 
+// ── where along the top: the notch can be dragged left and right ─────────────
+
+const DRAG_FROM = 4;  // px of travel before a press counts as a drag
+const SNAP = 24;      // px from the middle that snaps back to it
+let drag = null;      // { x0, left0, moved, at } while the button is held
+
+/** The notch's spot along the top, as a fraction of the width (0.5 = middle). */
+function notchAt() {
+  if (drag && drag.moved) return drag.at;
+  const at = Number(store.settings.get().notchX);
+  return Number.isFinite(at) ? Math.min(1, Math.max(0, at)) : 0.5;
+}
+
+/** The window's left edge for a spot, kept wholly inside the work area. */
+function notchLeft(workArea, at = notchAt()) {
+  const x = workArea.x + at * workArea.width - W / 2;
+  return Math.round(Math.min(workArea.x + workArea.width - W, Math.max(workArea.x, x)));
+}
+
 function placeNotch() {
   const workArea = homeArea();
-  notch.setBounds({ x: Math.round(workArea.x + (workArea.width - W) / 2), y: workArea.y, width: W, height: winH });
+  notch.setBounds({ x: notchLeft(workArea), y: workArea.y, width: W, height: winH });
+}
+
+/**
+ * Follow the cursor while the button is held, then tell the renderer whether
+ * that press was a drag or just a click. Polled, not evented: the button can
+ * come up anywhere on screen, and the window may not hear it.
+ */
+function dragTick() {
+  if (!drag || !notch || notch.isDestroyed()) { drag = null; return; }
+  const dx = screen.getCursorScreenPoint().x - drag.x0;
+  if (!drag.moved && Math.abs(dx) >= DRAG_FROM) drag.moved = true;
+  if (drag.moved) {
+    const area = homeArea();
+    const centre = drag.left0 + dx + W / 2 - area.x;
+    const at = Math.abs(centre - area.width / 2) < SNAP ? 0.5 : centre / area.width;
+    drag.at = Math.min(1, Math.max(0, at));
+    notch.setBounds({ x: notchLeft(area), y: area.y, width: W, height: winH });
+  }
+  if (windows.buttonDown()) { timers.drag = setTimeout(dragTick, 16); return; }
+  const { moved, at } = drag;
+  drag = null;
+  if (moved) store.settings.set({ notchX: at });
+  send("drag-end", { moved });
+  if (moved) send("state", publicState());
 }
 
 /**
@@ -147,7 +190,8 @@ function cursorTick() {
   const x = p.x - b.x, y = p.y - b.y;
   const near = x > -60 && y > -60 && x < b.width + 60 && y < b.height + 60;
   const over = hitRects.some((r) => x >= r.x && y >= r.y && x <= r.x + r.w && y <= r.y + r.h);
-  const want = over || focusable;
+  // Stay solid for the whole drag, even where the cursor has slipped off Pip.
+  const want = over || focusable || !!drag;
   if (want !== solid) {
     solid = want;
     notch.setIgnoreMouseEvents(!solid, { forward: true });
@@ -302,6 +346,12 @@ ipcMain.on("win-height", (_e, h) => {
   placeNotch();
 });
 ipcMain.on("focus", (_e, on) => setFocusable(!!on));
+ipcMain.on("drag-start", () => {
+  if (drag || !notch || notch.isDestroyed()) return;
+  drag = { x0: screen.getCursorScreenPoint().x, left0: notch.getBounds().x, moved: false, at: notchAt() };
+  clearTimeout(timers.drag);
+  dragTick();
+});
 ipcMain.on("demo-state", (_e, on) => {
   const next = !!on;
   if (next === demoRunning) return;
