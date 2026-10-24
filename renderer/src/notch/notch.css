@@ -48,7 +48,7 @@ button { font: inherit; }
 .hint.ok { color: var(--ok); }
 .hint.bad { color: var(--bad); }
 
-.settings { display: flex; flex-direction: column; gap: 10px; min-height: 100%; }
+.settings { display: flex; flex-direction: column; gap: 8px; min-height: 100%; }
 
 .s-tabs {
   display: flex; gap: 3px; padding: 3px; flex: none;
@@ -105,8 +105,9 @@ button { font: inherit; }
 .swatch.on { box-shadow: 0 0 0 2px var(--surface), 0 0 0 4px var(--text); }
 
 .tiles { display: grid; grid-template-columns: repeat(6, minmax(0, 1fr)); gap: 6px; }
+.tiles.five { grid-template-columns: repeat(5, minmax(0, 1fr)); }
 .tile {
-  display: flex; flex-direction: column; align-items: center; gap: 2px; padding: 6px 2px 5px;
+  display: flex; flex-direction: column; align-items: center; gap: 1px; padding: 4px 2px 4px;
   border: 1px solid transparent; border-radius: 10px; background: var(--raise); color: var(--muted);
   font-size: 11px; cursor: pointer; transition: background 120ms, border-color 120ms;
 }
@@ -153,6 +154,10 @@ canvas.preview { position: static; }
 .toggle i { position: absolute; top: 3px; left: 3px; width: 15px; height: 15px; border-radius: 50%; background: #fff; transition: transform 150ms; }
 .toggle.on { background: #3DBB74; }
 .toggle.on i { transform: translateX(15px); }
+.toggle.sm { width: 28px; height: 16px; }
+.toggle.sm i { top: 2px; left: 2px; width: 12px; height: 12px; }
+.toggle.sm.on i { transform: translateX(12px); }
+.mini-toggle { display: flex; align-items: center; gap: 6px; cursor: pointer; }
 
 /* ── inspector: what one session or subagent is doing, live ───────────────── */
 

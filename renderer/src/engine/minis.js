@@ -8,6 +8,7 @@
 import { clamp, now, rand, wall, Spring } from "./util.js";
 import { ctx, ellipse, FONT } from "./gfx.js";
 import * as creature from "./creature.js";
+import { get as getLook } from "./look.js";
 import * as particles from "./particles.js";
 import * as sound from "./sound.js";
 import { agents, retire } from "./model.js";
@@ -231,7 +232,7 @@ export function draw(t) {
     if (m.key === focus) drawFocusRing(v.x.v, y, sc, m.hue, t);
 
     creature.draw(v.x.v, y, sc, {
-      pal: creature.palette(m.hue), t,
+      pal: creature.palette(m.hue), t, kind: getLook().kind,
       sx: 1 + (working ? Math.sin(t * 7 + v.phase) * 0.04 : 0), sy: 1,
       // A failed one leans, which reads as a slump at this size.
       rot: mood && mood.failed ? 0.18 : working ? Math.sin(t * 3 + v.phase) * 0.08 : 0,

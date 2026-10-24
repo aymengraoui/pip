@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import * as engine from "../engine/index.js";
-import { ACCESSORIES, BODIES, DEFAULT_LOOK, THEMES } from "../engine/look.js";
+import { ACCESSORIES, BODIES, DEFAULT_LOOK, KINDS, THEMES } from "../engine/look.js";
 
 const pip = window.pip;
 const clean = (err) => String(err?.message || err).replace(/^Error invoking remote method '[^']+': (Error: )?/, "");
@@ -68,7 +68,7 @@ function ScreenPicker({ displays, value, onChange }) {
 }
 
 /** A still of Pip in some look, drawn by the engine itself. */
-function Preview({ look, size = 36 }) {
+function Preview({ look, size = 32 }) {
   const ref = useRef(null);
   const key = JSON.stringify(look);
   useEffect(() => { if (ref.current) engine.drawPreview(ref.current, look, size); }, [key, size]);
@@ -85,12 +85,28 @@ function Tile({ on, name, look, onClick }) {
   );
 }
 
-/** Pip's colour, accessory, cheeks and the notch theme. Pip above is the live preview. */
+/** What Pip is, its colour, accessory, cheeks and the notch theme. Pip above is the live preview. */
 function Appearance({ look, onChange }) {
   const l = { ...DEFAULT_LOOK, ...look };
   return (
     <>
-      <Section title="Colour" aside={BODIES[l.body]?.name}>
+      <Section title="Creature">
+        <div className="s-pad tiles five">
+          {Object.entries(KINDS).map(([id, k]) => (
+            // Each comes in its usual coat; the swatches below can change it after.
+            <Tile key={id} on={l.kind === id} name={k.name} look={{ ...l, kind: id, body: k.body }} onClick={() => onChange({ kind: id, body: k.body })} />
+          ))}
+        </div>
+      </Section>
+      <Section
+        title={`Colour · ${BODIES[l.body]?.name}`}
+        aside={(
+          <label className="mini-toggle">
+            Rosy cheeks
+            <button className={`toggle sm ${l.cheeks ? "on" : ""}`} role="switch" aria-checked={l.cheeks} onClick={() => onChange({ cheeks: !l.cheeks })}><i /></button>
+          </label>
+        )}
+      >
         <div className="s-pad s-choices">
           {Object.entries(BODIES).map(([id, b]) => (
             <button
@@ -101,7 +117,6 @@ function Appearance({ look, onChange }) {
             />
           ))}
         </div>
-        <Toggle label="Rosy cheeks" on={l.cheeks} onChange={(on) => onChange({ cheeks: on })} />
       </Section>
       <Section title="Wearing">
         <div className="s-pad tiles">

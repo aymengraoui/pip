@@ -16,7 +16,7 @@ import { THEMES } from "../engine/look.js";
 
 const pip = window.pip;
 const PANELS = {
-  settings: { w: 460, h: 520 },
+  settings: { w: 460, h: 536 },
   inspect: { w: 520, h: 420 },
 };
 

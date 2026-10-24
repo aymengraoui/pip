@@ -71,7 +71,7 @@ which is what keeps this graph a DAG and the modules testable:
 
 ```
  0  util  gfx  clock  bridge  sound  speech  pointer  look (no engine imports)
- 1  particles  creature  model                            (-> layer 0)
+ 1  particles  critters  creature  model                  (-> layer 0; creature -> critters)
  2  pip                                                   (-> model, creature, …)
  3  minis  inspector                                      (-> pip, model)
  4  layout                                                (-> minis, pip, model, bridge)
@@ -324,7 +324,7 @@ focus only because it has a text field.
 ## Panels
 
 **Settings has three tabs** (General, Appearance, Claude Code), each a few
-captioned cards (`Section`), sized so no tab scrolls at 520 px; the footer
+captioned cards (`Section`), sized so no tab scrolls at 536 px; the footer
 (version, update check, Demo, Quit) is sticky. Add a setting to the card it
 belongs with, and if a tab starts to scroll, trim before adding a tab. Picture
 tiles are drawn by the engine (`engine.drawPreview`, via `gfx.drawOn`, which
@@ -414,9 +414,12 @@ happens once.
 - **New hook field** → add it in `resources/hook.js` *and* read it defensively.
 - **New mood** → `MOODS` in `model.js` (accent + label + priority), a face in
   `pip.face`, and a reaction in `pip.onMood`.
-- **New colour, accessory or theme** → add it to `engine/look.js` (Settings lists
-  whatever is there); an accessory also needs a case in `creature.drawAccessory`,
-  placed beside the sprout, never on top of it. Themes stay dark: the notch grows
+- **New creature, colour, accessory or theme** → add it to `engine/look.js`
+  (Settings lists whatever is there). A creature also needs its own body in
+  `critters.js` (the face stays shared, at the same spot), driven by the same `leafAngle`/`leafSpin`/`prop` the sprout's
+  leaves use so every mood still reads; helpers are drawn as the same kind. An
+  accessory needs a case in `creature.drawAccessory`, beside the sprout or
+  antenna, never on top of it. Themes stay dark: the notch grows
   out of the bezel. `look.set` drops names it doesn't know, so a setting saved by
   a newer version can't break an older one.
 - `W`/`H` in `engine/gfx.js` must stay in sync with `electron/main.js`.

@@ -1,4 +1,4 @@
-// How Pip looks: its colour, what it wears, and the notch it lives in. Picked in
+// How Pip looks: what it is, its colour, what it wears, and the notch it lives in. Picked in
 // Settings, saved as `look` in settings.json, read here on every frame.
 //
 // Plain data and two getters, no engine imports, so the creature, the notch and
@@ -12,7 +12,23 @@ export const BODIES = {
   lavender: { name: "Lavender", light: "#F6F0FF", mid: "#CDB8FF", edge: "#9F84EB", feet: "#8569D1", leaf: "#3DBB74", leafDark: "#2A8A56" },
   sky:      { name: "Sky",      light: "#EEF8FF", mid: "#A8DBFF", edge: "#6AB3EE", feet: "#4F97D4", leaf: "#3DBB74", leafDark: "#2A8A56" },
   lemon:    { name: "Lemon",    light: "#FFFDEB", mid: "#FFE98F", edge: "#EFC94F", feet: "#D4AC33", leaf: "#3DBB74", leafDark: "#2A8A56" },
+  ginger:   { name: "Ginger",   light: "#FFF3E2", mid: "#FFC27A", edge: "#EE9440", feet: "#D27A2C", leaf: "#3DBB74", leafDark: "#2A8A56" },
+  snow:     { name: "Snow",     light: "#FFFFFF", mid: "#F2F2F7", edge: "#CBCCD8", feet: "#B0B2C4", leaf: "#3DBB74", leafDark: "#2A8A56" },
+  caramel:  { name: "Caramel",  light: "#FFF3E4", mid: "#E9C190", edge: "#C99358", feet: "#A57340", leaf: "#3DBB74", leafDark: "#2A8A56" },
+  steel:    { name: "Steel",    light: "#F3F7FB", mid: "#C8D5E2", edge: "#91A3B7", feet: "#71849A", leaf: "#3DBB74", leafDark: "#2A8A56" },
   sakura:   { name: "Sakura",   light: "#FFF6F8", mid: "#FFD6E0", edge: "#F0A6BA", feet: "#D9889E", leaf: "#FF8FB1", leafDark: "#D9628F" },
+};
+
+/**
+ * Who Pip is, and the coat it comes in. Helpers are the same kind, in their own
+ * colours. The sprout is drawn in creature.js, the rest in critters.js.
+ */
+export const KINDS = {
+  sprout: { name: "Sprout", body: "mint" },
+  kitty: { name: "Kitty", body: "ginger" },
+  bunny: { name: "Bunny", body: "snow" },
+  puppy: { name: "Puppy", body: "caramel" },
+  robot: { name: "Robot", body: "steel" },
 };
 
 /** Something to wear. Drawn by creature.js, on Pip only. */
@@ -38,7 +54,7 @@ export const THEMES = {
   cocoa:    { name: "Cocoa",    bg: "#170F0B", surface: "#231914", raise: "#2B1F19", hover: "#372820", line: "#3E2E25", sub: "#BCA595" },
 };
 
-export const DEFAULT_LOOK = { body: "mint", accessory: "none", cheeks: false, theme: "midnight" };
+export const DEFAULT_LOOK = { kind: "sprout", body: "mint", accessory: "none", cheeks: false, theme: "midnight" };
 
 let current = DEFAULT_LOOK;
 
@@ -46,6 +62,7 @@ let current = DEFAULT_LOOK;
 export function set(look) {
   const l = { ...DEFAULT_LOOK, ...(look || {}) };
   current = {
+    kind: l.kind in KINDS ? l.kind : DEFAULT_LOOK.kind,
     body: l.body in BODIES ? l.body : DEFAULT_LOOK.body,
     accessory: l.accessory in ACCESSORIES ? l.accessory : DEFAULT_LOOK.accessory,
     cheeks: !!l.cheeks,
