@@ -3,7 +3,7 @@
 //
 // draw(x, y, scale, {
 //   pal, t, sx, sy, rot, look:{x,y}, open, eyes, mouth, blush,
-//   prop, leafSpin, leafAngle, walk,
+//   prop, leafSpin, leafAngle, walk, accessory,
 // })
 
 import { clamp } from "./util.js";
@@ -101,8 +101,113 @@ export function draw(x, y, s, o) {
     ellipse(rx * 0.62, ry * 0.2, R * 0.19, R * 0.11);
   }
 
+  if (o.accessory && o.accessory !== "glasses") drawAccessory(o.accessory, R, rx, ry, s);
   drawEyes(o, R, rx, ry, s);
   drawMouth(o, R, ry, s);
+  if (o.accessory === "glasses") drawGlasses(R, rx, ry, s);
+  ctx.restore();
+}
+
+/** Something worn on the head, beside the sprout so the two never collide. */
+function drawAccessory(kind, R, rx, ry, s) {
+  ctx.save();
+  ctx.lineJoin = "round";
+  switch (kind) {
+    case "bow": {
+      ctx.translate(-rx * 0.58, -ry * 0.7);
+      ctx.rotate(-0.35);
+      const w = R * 0.34, h = R * 0.24;
+      ctx.fillStyle = "#FF6FA3";
+      for (const side of [-1, 1]) {
+        ctx.beginPath();
+        ctx.moveTo(0, 0);
+        ctx.quadraticCurveTo(side * w * 0.6, -h * 1.1, side * w, -h * 0.4);
+        ctx.quadraticCurveTo(side * w * 1.1, h * 0.4, side * w, h * 0.5);
+        ctx.quadraticCurveTo(side * w * 0.6, h * 1.1, 0, 0);
+        ctx.fill();
+      }
+      ctx.fillStyle = "#E04F86";
+      ellipse(0, 0, R * 0.09, R * 0.1);
+      ctx.fillStyle = "rgba(255,255,255,0.5)";
+      ellipse(-w * 0.55, -h * 0.35, R * 0.06, R * 0.035);
+      break;
+    }
+    case "flower": {
+      ctx.translate(rx * 0.6, -ry * 0.66);
+      ctx.rotate(0.3);
+      ctx.fillStyle = "#FFFFFF";
+      for (let i = 0; i < 5; i++) {
+        const a = (i / 5) * Math.PI * 2;
+        ellipse(Math.cos(a) * R * 0.14, Math.sin(a) * R * 0.14, R * 0.11, R * 0.11);
+      }
+      ctx.fillStyle = "#FFC94D";
+      ellipse(0, 0, R * 0.1, R * 0.1);
+      break;
+    }
+    case "crown": {
+      ctx.translate(-rx * 0.45, -ry * 0.9);
+      ctx.rotate(-0.38);
+      const w = R * 0.56, h = R * 0.34;
+      ctx.beginPath();
+      ctx.moveTo(-w / 2, 0);
+      ctx.lineTo(-w / 2, -h * 0.75);
+      ctx.lineTo(-w / 4, -h * 0.3);
+      ctx.lineTo(0, -h);
+      ctx.lineTo(w / 4, -h * 0.3);
+      ctx.lineTo(w / 2, -h * 0.75);
+      ctx.lineTo(w / 2, 0);
+      ctx.closePath();
+      ctx.fillStyle = "#FFD54A";
+      ctx.fill();
+      ctx.strokeStyle = "#E0A82E";
+      ctx.lineWidth = Math.max(0.8, 1 * s);
+      ctx.stroke();
+      ctx.fillStyle = "#FF5C8A";
+      ellipse(0, -h * 0.3, R * 0.065, R * 0.065);
+      break;
+    }
+    case "party": {
+      ctx.translate(-rx * 0.45, -ry * 0.82);
+      ctx.rotate(-0.45);
+      const w = R * 0.46, h = R * 0.66;
+      ctx.beginPath();
+      ctx.moveTo(-w / 2, 0);
+      ctx.lineTo(0, -h);
+      ctx.lineTo(w / 2, 0);
+      ctx.quadraticCurveTo(0, h * 0.12, -w / 2, 0);
+      ctx.fillStyle = "#6BB8FF";
+      ctx.fill();
+      ctx.save();
+      ctx.clip();
+      ctx.fillStyle = "#FF6B8B";
+      ctx.fillRect(-w, -h * 0.62, w * 2, h * 0.16);
+      ctx.fillRect(-w, -h * 0.26, w * 2, h * 0.16);
+      ctx.restore();
+      ctx.fillStyle = "#FFD54A";
+      ellipse(0, -h, R * 0.09, R * 0.09);
+      break;
+    }
+  }
+  ctx.restore();
+}
+
+/** Round glasses, over the eyes so they still blink and look around behind them. */
+function drawGlasses(R, rx, ry, s) {
+  const ex = rx * 0.38, ey = -ry * 0.08, r = R * 0.34;
+  ctx.save();
+  ctx.strokeStyle = INK;
+  ctx.lineWidth = Math.max(1, 1.5 * s);
+  ctx.fillStyle = "rgba(255,255,255,0.14)";
+  for (const side of [-1, 1]) {
+    ctx.beginPath();
+    ctx.arc(side * ex, ey, r, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.stroke();
+  }
+  ctx.beginPath();
+  ctx.moveTo(-ex + r, ey);
+  ctx.quadraticCurveTo(0, ey - R * 0.08, ex - r, ey);
+  ctx.stroke();
   ctx.restore();
 }
 

@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { ACCESSORIES, BODIES, DEFAULT_LOOK, THEMES } from "../engine/look.js";
 
 const pip = window.pip;
 const clean = (err) => String(err?.message || err).replace(/^Error invoking remote method '[^']+': (Error: )?/, "");
@@ -50,6 +51,50 @@ function ScreenPicker({ displays, value, onChange }) {
   );
 }
 
+/** Pip's colour, accessory, cheeks and the notch theme. Pip above is the preview. */
+function Appearance({ look, onChange }) {
+  const l = { ...DEFAULT_LOOK, ...look };
+  return (
+    <>
+      <div className="s-field">
+        <div>Pip's colour <span className="hint">· {BODIES[l.body]?.name}</span></div>
+        <div className="s-choices">
+          {Object.entries(BODIES).map(([id, b]) => (
+            <button
+              key={id} title={b.name} aria-label={b.name}
+              className={`swatch ${l.body === id ? "on" : ""}`}
+              style={{ background: `radial-gradient(circle at 35% 30%, ${b.light}, ${b.mid} 55%, ${b.edge})` }}
+              onClick={() => onChange({ body: id })}
+            />
+          ))}
+        </div>
+      </div>
+      <div className="s-field">
+        <div>Wearing</div>
+        <div className="s-choices">
+          {Object.entries(ACCESSORIES).map(([id, name]) => (
+            <button key={id} className={`btn ${l.accessory === id ? "on" : ""}`} onClick={() => onChange({ accessory: id })}>{name}</button>
+          ))}
+        </div>
+      </div>
+      <Toggle label="Rosy cheeks" hint="Always a little blush" on={l.cheeks} onChange={(on) => onChange({ cheeks: on })} />
+      <div className="s-field">
+        <div>Notch theme <span className="hint">· {THEMES[l.theme]?.name}</span></div>
+        <div className="s-choices">
+          {Object.entries(THEMES).map(([id, th]) => (
+            <button
+              key={id} title={th.name} aria-label={th.name}
+              className={`swatch ${l.theme === id ? "on" : ""}`}
+              style={{ background: `linear-gradient(135deg, ${th.bg} 50%, ${th.hover} 50%)` }}
+              onClick={() => onChange({ theme: id })}
+            />
+          ))}
+        </div>
+      </div>
+    </>
+  );
+}
+
 export default function Settings({ state, demoOn, onDemo, onStopDemo }) {
   const s = state.settings;
   const u = state.update || { status: "idle", current: state.version };
@@ -75,6 +120,7 @@ export default function Settings({ state, demoOn, onDemo, onStopDemo }) {
 
   return (
     <div className="settings">
+      <Appearance look={s.look} onChange={(patch) => set({ look: patch })} />
       <Toggle label="Start with Windows" on={state.startup} onChange={(on) => pip.setStartup(on)} />
       <Toggle label="Sounds" on={!s.muted} onChange={(on) => set({ muted: !on })} />
       <Toggle

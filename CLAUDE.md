@@ -70,7 +70,7 @@ Import layers inside `renderer/src/engine/` — **imports only ever point down**
 which is what keeps this graph a DAG and the modules testable:
 
 ```
- 0  util  gfx  clock  bridge  sound  speech  pointer      (no engine imports)
+ 0  util  gfx  clock  bridge  sound  speech  pointer  look (no engine imports)
  1  particles  creature  model                            (-> layer 0)
  2  pip                                                   (-> model, creature, …)
  3  minis  inspector                                      (-> pip, model)
@@ -407,6 +407,11 @@ happens once.
 - **New hook field** → add it in `resources/hook.js` *and* read it defensively.
 - **New mood** → `MOODS` in `model.js` (accent + label + priority), a face in
   `pip.face`, and a reaction in `pip.onMood`.
+- **New colour, accessory or theme** → add it to `engine/look.js` (Settings lists
+  whatever is there); an accessory also needs a case in `creature.drawAccessory`,
+  placed beside the sprout, never on top of it. Themes stay dark: the notch grows
+  out of the bezel. `look.set` drops names it doesn't know, so a setting saved by
+  a newer version can't break an older one.
 - `W`/`H` in `engine/gfx.js` must stay in sync with `electron/main.js`.
 - Keep `koffi` under `asarUnpack` in `package.json`, or game mode dies in the
   installed build.

@@ -23,6 +23,7 @@ import * as gfx from "./gfx.js";
 import * as input from "./input.js";
 import * as inspector from "./inspector.js";
 import * as layout from "./layout.js";
+import * as look from "./look.js";
 import * as minis from "./minis.js";
 import * as model from "./model.js";
 import * as particles from "./particles.js";
@@ -64,6 +65,8 @@ export function ingest({ events, replay }) {
 }
 
 export function setMuted(on) { sound.setMuted(on); }
+/** Pip's colour, accessory, cheeks and notch theme, from settings.json. */
+export function setLook(l) { look.set(l); clock.wake(); }
 export function sfx(name) { sound.play(name); }
 export function speak(text, dur = 2.2) { speech.say(text, dur); clock.wake(); }
 export function wake() { clock.wake(); }

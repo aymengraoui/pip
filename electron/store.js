@@ -15,6 +15,9 @@ const DEFAULTS = {
   // "follow" puts the notch on the screen you are working on; a display id pins
   // it to that screen for as long as it is plugged in.
   screen: "follow",
+  // Pip's colour, what it wears, rosy cheeks, and the notch's theme. Names are
+  // the keys in renderer/src/engine/look.js; unknown ones fall back to defaults.
+  look: { body: "mint", accessory: "none", cheeks: false, theme: "midnight" },
 };
 
 function merge(base, over) {

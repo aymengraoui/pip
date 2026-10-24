@@ -16,6 +16,7 @@ import { L } from "../renderer/src/engine/layout.js";
 import * as watchdog from "../renderer/src/engine/watchdog.js";
 import { review } from "../renderer/src/engine/layout.js";
 import { pip } from "../renderer/src/engine/pip.js";
+import { ACCESSORIES, BODIES, THEMES, get as getLook } from "../renderer/src/engine/look.js";
 
 // -- virtual clock, so 10 minutes of Pip take 20 ms ---------------------------
 
@@ -419,6 +420,16 @@ engine.speak("hello", 1);
 engine.setMuted(true);
 engine.sfx("pop");
 engine.drawIcon(stubCanvas(), 256);
+
+// Every look draws, and names from some other version fall back instead of breaking.
+let lookOk = true;
+for (const body of Object.keys(BODIES)) for (const accessory of Object.keys(ACCESSORIES)) for (const theme of Object.keys(THEMES)) {
+  try { engine.setLook({ body, accessory, theme, cheeks: true }); advance(32); } catch { lookOk = false; }
+}
+check("every colour, accessory and theme draws", lookOk);
+engine.setLook({ body: "plaid", accessory: "jetpack", theme: "neon" });
+check("unknown looks fall back to the defaults", getLook().body === "mint" && getLook().accessory === "none" && getLook().theme === "midnight");
+engine.setLook(undefined);
 
 // Long quiet stretch: Pip should nap, and still be drawing something.
 advance(300000);
