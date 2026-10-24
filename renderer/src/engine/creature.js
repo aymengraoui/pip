@@ -3,11 +3,16 @@
 //
 // draw(x, y, scale, {
 //   pal, t, sx, sy, rot, look:{x,y}, open, eyes, mouth, blush,
-//   prop, leafSpin, leafAngle, walk,
+//   prop, leafSpin, leafAngle, walk, accessory, kind,
 // })
+//
+// `kind` picks the creature (look.js KINDS). The sprout is drawn here; the
+// kitty, bunny, puppy and robot are their own whole bodies in critters.js. All
+// of them wear the same face, drawn here, so every expression works on each.
 
 import { clamp } from "./util.js";
 import { ctx, ellipse, heartPath } from "./gfx.js";
+import * as critters from "./critters.js";
 
 export const PIP_PAL = { light: "#EFFFF7", mid: "#9DEBCB", edge: "#58C79C", feet: "#44A984", leaf: "#3DBB74", leafDark: "#2A8A56" };
 
@@ -66,12 +71,37 @@ function drawSprout(o, R, ry, s) {
 
 export function draw(x, y, s, o) {
   const R = 13 * s, rx = R * 1.1, ry = R * 0.96;
-  const pal = o.pal;
   ctx.save();
   ctx.translate(x, y);
   ctx.rotate(o.rot || 0);
   ctx.scale(o.sx, o.sy);
 
+  const kind = o.kind || "sprout";
+  if (kind === "sprout") drawSproutBody(o, R, rx, ry, s);
+  else critters.back(kind, o, R, s);
+
+  if (o.blush > 0.01) {
+    ctx.fillStyle = `rgba(255,120,160,${0.55 * o.blush})`;
+    ellipse(-rx * 0.62, ry * 0.2, R * 0.19, R * 0.11);
+    ellipse(rx * 0.62, ry * 0.2, R * 0.19, R * 0.11);
+  }
+
+  if (o.accessory && o.accessory !== "glasses") drawAccessory(o.accessory, R, rx, ry, s, kind);
+  const face = critters.faceStyle(kind);
+  const mouth = (o.mouth || "smile") === "smile" ? critters.smileFor(kind) : o.mouth;
+  ctx.save();
+  // A robot's face is light on a dark visor, so it glows a little.
+  if (face.led) { ctx.shadowColor = face.ink; ctx.shadowBlur = 5 * s; }
+  drawEyes(o, R, rx, ry, s, face);
+  critters.snout(kind, o, R, s);
+  drawMouth(o, R, ry, s, face, mouth);
+  ctx.restore();
+  if (o.accessory === "glasses") drawGlasses(R, rx, ry, s, face);
+  ctx.restore();
+}
+
+function drawSproutBody(o, R, rx, ry, s) {
+  const pal = o.pal;
   // feet
   ctx.fillStyle = pal.feet;
   const step = o.walk ? Math.sin(o.t * 16) * R * 0.08 : 0;
@@ -94,23 +124,120 @@ export function draw(x, y, s, o) {
   ctx.beginPath();
   ctx.ellipse(-rx * 0.3, -ry * 0.55, rx * 0.32, ry * 0.18, -0.5, Math.PI * 1.05, Math.PI * 1.7);
   ctx.stroke();
+}
 
-  if (o.blush > 0.01) {
-    ctx.fillStyle = `rgba(255,120,160,${0.55 * o.blush})`;
-    ellipse(-rx * 0.62, ry * 0.2, R * 0.19, R * 0.11);
-    ellipse(rx * 0.62, ry * 0.2, R * 0.19, R * 0.11);
+/**
+ * Something worn on the head. Hats sit beside a sprout or an antenna so the two
+ * never collide; between a pet's ears there is room in the middle.
+ */
+function drawAccessory(kind, R, rx, ry, s, creature) {
+  const middle = creature === "kitty" || creature === "bunny" || creature === "puppy";
+  ctx.save();
+  ctx.lineJoin = "round";
+  switch (kind) {
+    case "bow": {
+      ctx.translate(-rx * 0.58, -ry * 0.7);
+      ctx.rotate(-0.35);
+      const w = R * 0.34, h = R * 0.24;
+      ctx.fillStyle = "#FF6FA3";
+      for (const side of [-1, 1]) {
+        ctx.beginPath();
+        ctx.moveTo(0, 0);
+        ctx.quadraticCurveTo(side * w * 0.6, -h * 1.1, side * w, -h * 0.4);
+        ctx.quadraticCurveTo(side * w * 1.1, h * 0.4, side * w, h * 0.5);
+        ctx.quadraticCurveTo(side * w * 0.6, h * 1.1, 0, 0);
+        ctx.fill();
+      }
+      ctx.fillStyle = "#E04F86";
+      ellipse(0, 0, R * 0.09, R * 0.1);
+      ctx.fillStyle = "rgba(255,255,255,0.5)";
+      ellipse(-w * 0.55, -h * 0.35, R * 0.06, R * 0.035);
+      break;
+    }
+    case "flower": {
+      ctx.translate(rx * 0.6, -ry * 0.66);
+      ctx.rotate(0.3);
+      ctx.fillStyle = "#FFFFFF";
+      for (let i = 0; i < 5; i++) {
+        const a = (i / 5) * Math.PI * 2;
+        ellipse(Math.cos(a) * R * 0.14, Math.sin(a) * R * 0.14, R * 0.11, R * 0.11);
+      }
+      ctx.fillStyle = "#FFC94D";
+      ellipse(0, 0, R * 0.1, R * 0.1);
+      break;
+    }
+    case "crown": {
+      ctx.translate(middle ? 0 : -rx * 0.45, middle ? -ry * 0.88 : -ry * 0.9);
+      ctx.rotate(middle ? 0 : -0.38);
+      const w = R * 0.56, h = R * 0.34;
+      ctx.beginPath();
+      ctx.moveTo(-w / 2, 0);
+      ctx.lineTo(-w / 2, -h * 0.75);
+      ctx.lineTo(-w / 4, -h * 0.3);
+      ctx.lineTo(0, -h);
+      ctx.lineTo(w / 4, -h * 0.3);
+      ctx.lineTo(w / 2, -h * 0.75);
+      ctx.lineTo(w / 2, 0);
+      ctx.closePath();
+      ctx.fillStyle = "#FFD54A";
+      ctx.fill();
+      ctx.strokeStyle = "#E0A82E";
+      ctx.lineWidth = Math.max(0.8, 1 * s);
+      ctx.stroke();
+      ctx.fillStyle = "#FF5C8A";
+      ellipse(0, -h * 0.3, R * 0.065, R * 0.065);
+      break;
+    }
+    case "party": {
+      ctx.translate(middle ? 0 : -rx * 0.45, -ry * 0.82);
+      ctx.rotate(middle ? 0 : -0.45);
+      const w = R * 0.46, h = R * 0.66;
+      ctx.beginPath();
+      ctx.moveTo(-w / 2, 0);
+      ctx.lineTo(0, -h);
+      ctx.lineTo(w / 2, 0);
+      ctx.quadraticCurveTo(0, h * 0.12, -w / 2, 0);
+      ctx.fillStyle = "#6BB8FF";
+      ctx.fill();
+      ctx.save();
+      ctx.clip();
+      ctx.fillStyle = "#FF6B8B";
+      ctx.fillRect(-w, -h * 0.62, w * 2, h * 0.16);
+      ctx.fillRect(-w, -h * 0.26, w * 2, h * 0.16);
+      ctx.restore();
+      ctx.fillStyle = "#FFD54A";
+      ellipse(0, -h, R * 0.09, R * 0.09);
+      break;
+    }
   }
-
-  drawEyes(o, R, rx, ry, s);
-  drawMouth(o, R, ry, s);
   ctx.restore();
 }
 
-function drawEyes(o, R, rx, ry, s) {
+/** Round glasses, over the eyes so they still blink and look around behind them. */
+function drawGlasses(R, rx, ry, s, face) {
+  const ex = rx * 0.38, ey = -ry * 0.08, r = R * 0.34;
+  ctx.save();
+  ctx.strokeStyle = face.ink;
+  ctx.lineWidth = Math.max(1, 1.5 * s);
+  ctx.fillStyle = "rgba(255,255,255,0.14)";
+  for (const side of [-1, 1]) {
+    ctx.beginPath();
+    ctx.arc(side * ex, ey, r, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.stroke();
+  }
+  ctx.beginPath();
+  ctx.moveTo(-ex + r, ey);
+  ctx.quadraticCurveTo(0, ey - R * 0.08, ex - r, ey);
+  ctx.stroke();
+  ctx.restore();
+}
+
+function drawEyes(o, R, rx, ry, s, face) {
   const ex = rx * 0.38, ey = -ry * 0.08;
   const ew = R * 0.25, eh = R * 0.3;
   ctx.lineCap = "round";
-  ctx.strokeStyle = INK;
+  ctx.strokeStyle = face.ink;
   ctx.lineWidth = Math.max(1, 1.8 * s);
   for (const side of [-1, 1]) {
     const cx = side * ex;
@@ -156,6 +283,12 @@ function drawEyes(o, R, rx, ry, s) {
           ctx.stroke();
           break;
         }
+        if (face.led) {
+          // No pupils on a screen: the whole light looks where Pip looks.
+          ctx.fillStyle = face.ink;
+          ellipse(cx + o.look.x * ew * 0.3, ey + o.look.y * eh * 0.25, ew * 0.62 * wide, eh * 0.74 * wide * open);
+          break;
+        }
         ctx.fillStyle = "#FFFFFF";
         ellipse(cx, ey, ew * wide, eh * wide * open);
         const pr = R * (o.eyes === "wide" ? 0.1 : 0.15);
@@ -169,19 +302,53 @@ function drawEyes(o, R, rx, ry, s) {
   }
 }
 
-function drawMouth(o, R, ry, s) {
+function drawMouth(o, R, ry, s, face, mouth) {
   const my = ry * 0.4;
-  ctx.strokeStyle = INK;
-  ctx.fillStyle = "#3A2130";
+  ctx.strokeStyle = face.ink;
+  ctx.fillStyle = face.led ? face.ink : "#3A2130";
   ctx.lineWidth = Math.max(1, 1.5 * s);
   ctx.lineCap = "round";
-  switch (o.mouth) {
+  switch (mouth) {
+    case "cat": // ω, hanging from the nose
+      ctx.beginPath();
+      ctx.moveTo(0, R * 0.25); ctx.lineTo(0, my - R * 0.04);
+      ctx.moveTo(0, my - R * 0.04);
+      ctx.arc(-R * 0.08, my - R * 0.04, R * 0.08, 0, Math.PI);
+      ctx.moveTo(R * 0.16, my - R * 0.04);
+      ctx.arc(R * 0.08, my - R * 0.04, R * 0.08, 0, Math.PI);
+      ctx.stroke();
+      break;
+    case "bunny": // a little y, and two front teeth
+      ctx.beginPath();
+      ctx.moveTo(0, R * 0.24); ctx.lineTo(0, my - R * 0.06);
+      ctx.moveTo(-R * 0.1, my - R * 0.02); ctx.lineTo(0, my - R * 0.06); ctx.lineTo(R * 0.1, my - R * 0.02);
+      ctx.stroke();
+      ctx.fillStyle = "#FFFFFF";
+      ctx.lineWidth = Math.max(0.6, 0.9 * s);
+      ctx.beginPath();
+      ctx.roundRect(-R * 0.075, my - R * 0.03, R * 0.07, R * 0.11, R * 0.02);
+      ctx.roundRect(R * 0.005, my - R * 0.03, R * 0.07, R * 0.11, R * 0.02);
+      ctx.fill();
+      ctx.stroke();
+      break;
+    case "pup": // a happy w with the tongue out
+      ctx.fillStyle = "#FF7C9C";
+      ellipse(0, my + R * 0.07, R * 0.07, R * 0.08);
+      ctx.beginPath();
+      ctx.moveTo(0, R * 0.28); ctx.lineTo(0, my - R * 0.02);
+      ctx.moveTo(0, my - R * 0.02);
+      ctx.arc(-R * 0.1, my - R * 0.02, R * 0.1, 0, Math.PI * 0.85);
+      ctx.moveTo(0, my - R * 0.02);
+      ctx.arc(R * 0.1, my - R * 0.02, R * 0.1, Math.PI, Math.PI * 0.15, true);
+      ctx.stroke();
+      break;
     case "grin":
       ctx.beginPath();
       ctx.moveTo(-R * 0.2, my - R * 0.04);
       ctx.quadraticCurveTo(0, my + R * 0.34, R * 0.2, my - R * 0.04);
       ctx.closePath();
       ctx.fill();
+      if (face.led) break;
       ctx.fillStyle = "#FF7C9C";
       ellipse(0, my + R * 0.1, R * 0.08, R * 0.05);
       break;

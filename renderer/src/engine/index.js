@@ -23,6 +23,7 @@ import * as gfx from "./gfx.js";
 import * as input from "./input.js";
 import * as inspector from "./inspector.js";
 import * as layout from "./layout.js";
+import * as look from "./look.js";
 import * as minis from "./minis.js";
 import * as model from "./model.js";
 import * as particles from "./particles.js";
@@ -64,6 +65,8 @@ export function ingest({ events, replay }) {
 }
 
 export function setMuted(on) { sound.setMuted(on); }
+/** Pip's colour, accessory, cheeks and notch theme, from settings.json. */
+export function setLook(l) { look.set(l); clock.wake(); }
 export function sfx(name) { sound.play(name); }
 export function speak(text, dur = 2.2) { speech.say(text, dur); clock.wake(); }
 export function wake() { clock.wake(); }
@@ -158,6 +161,16 @@ export function inspectLead() {
 export function demo() { demoScript.play(ingest); }
 export function stopDemo() { demoScript.stop(ingest); }
 export const demoRunning = () => demoScript.isRunning();
+
+/** A still of Pip in some look, for the picture tiles in Settings. */
+export function drawPreview(el, l, size) {
+  const full = look.clean({ ...look.get(), ...l });
+  gfx.drawOn(el, size, () => creature.draw(size / 2, size * 0.6, size / 40, {
+    pal: look.BODIES[full.body], t: 0, sx: 1, sy: 1, rot: 0, look: { x: 0, y: 0.1 }, open: 1,
+    eyes: "normal", mouth: "smile", blush: full.cheeks ? 0.6 : 0.3, prop: false, leafSpin: 0, leafAngle: 0.1, walk: false,
+    accessory: full.accessory, kind: full.kind,
+  }));
+}
 
 /** Draws a big, happy Pip for the app icon (build step only). */
 export function drawIcon(el, size = 256) {

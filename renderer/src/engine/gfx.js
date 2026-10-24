@@ -31,6 +31,21 @@ export function attachSquare(el, size) {
   return ctx;
 }
 
+/**
+ * Draw on some other canvas for a moment (the Settings previews), then hand
+ * `ctx` straight back to the notch. Nothing else can run in between.
+ */
+export function drawOn(el, size, fn) {
+  const prev = ctx, prevDpr = dpr;
+  const scale = globalThis.devicePixelRatio || 1;
+  ctx = el.getContext("2d");
+  dpr = scale;
+  el.width = el.height = Math.round(size * scale);
+  ctx.setTransform(scale, 0, 0, scale, 0, 0);
+  ctx.clearRect(0, 0, size, size);
+  try { fn(); } finally { ctx = prev; dpr = prevDpr; }
+}
+
 /** Start a frame: reset the transform and clear the rows we may draw into. */
 export function beginFrame(height) {
   ctx.setTransform(dpr, 0, 0, dpr, 0, 0);

@@ -16,6 +16,8 @@ import { L } from "../renderer/src/engine/layout.js";
 import * as watchdog from "../renderer/src/engine/watchdog.js";
 import { review } from "../renderer/src/engine/layout.js";
 import { pip } from "../renderer/src/engine/pip.js";
+import * as gfx from "../renderer/src/engine/gfx.js";
+import { ACCESSORIES, BODIES, KINDS, THEMES, get as getLook } from "../renderer/src/engine/look.js";
 
 // -- virtual clock, so 10 minutes of Pip take 20 ms ---------------------------
 
@@ -419,6 +421,22 @@ engine.speak("hello", 1);
 engine.setMuted(true);
 engine.sfx("pop");
 engine.drawIcon(stubCanvas(), 256);
+
+// Every look draws, and names from some other version fall back instead of breaking.
+let lookOk = true;
+for (const kind of Object.keys(KINDS)) for (const body of Object.keys(BODIES)) for (const accessory of Object.keys(ACCESSORIES)) for (const theme of Object.keys(THEMES)) {
+  try { engine.setLook({ kind, body, accessory, theme, cheeks: true }); advance(32); } catch { lookOk = false; }
+}
+check("every creature, colour, accessory and theme draws", lookOk);
+engine.setLook({ kind: "dragon", body: "plaid", accessory: "jetpack", theme: "neon" });
+check("unknown looks fall back to the defaults", getLook().kind === "sprout" && getLook().body === "mint" && getLook().accessory === "none" && getLook().theme === "midnight");
+engine.setLook(undefined);
+engine.setLook({ body: "constructor", kind: "toString", theme: "__proto__" });
+check("built-in property names are unknown names too", getLook().body === "mint" && getLook().kind === "sprout" && getLook().theme === "midnight");
+engine.setLook(undefined);
+const notchCtx = gfx.ctx;
+for (const accessory of Object.keys(ACCESSORIES)) engine.drawPreview(stubCanvas(), { accessory }, 40);
+check("drawing a preview hands the notch its canvas back", gfx.ctx === notchCtx);
 
 // Long quiet stretch: Pip should nap, and still be drawing something.
 advance(300000);

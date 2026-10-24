@@ -10,8 +10,7 @@ import { agents, mood, MOODS } from "./model.js";
 import { L, ROW_H, ROW_TOP, hoveredMini, hoveredRow, isPlaying, panelName, review, rows, texts } from "./layout.js";
 import { pip } from "./pip.js";
 import { current as currentBubble } from "./speech.js";
-
-const SUB = "#9C9CA8";
+import { theme } from "./look.js";
 
 export function drawPill(t) {
   const x = L.x, w = L.w.v, h = L.h.v, r = Math.min(20, h / 2), e = 10;
@@ -38,7 +37,7 @@ export function drawPill(t) {
   ctx.lineTo(x + w, e);
   ctx.quadraticCurveTo(x + w, 0, x + w + e, 0);
   ctx.closePath();
-  ctx.fillStyle = "#0B0B0F";
+  ctx.fillStyle = theme().bg;
   ctx.fill();
   ctx.restore();
 
@@ -63,7 +62,7 @@ export function drawHeader(t) {
   ctx.fillStyle = "#FFFFFF";
   ctx.font = `600 ${lerp(13, 14, ex)}px ${FONT}`;
   ctx.fillText(fit(texts.title, maxW), tx, lerp(22, 28, ex));
-  ctx.fillStyle = SUB;
+  ctx.fillStyle = theme().sub;
   ctx.font = `11px ${FONT}`;
   ctx.fillText(fit(texts.sub, maxW), tx, lerp(38, 45, ex));
 
@@ -154,7 +153,7 @@ function drawSessionRow(s, y, right) {
   ctx.fillText(name, L.x + 48, y);
   const nw = ctx.measureText(name).width;
 
-  ctx.fillStyle = SUB;
+  ctx.fillStyle = theme().sub;
   ctx.font = `11.5px ${FONT}`;
   let what = MOODS[s.state].label;
   if (s.state === "working" && s.tool) what = s.tool;
@@ -170,7 +169,7 @@ function drawAgentRow(m, y, right) {
   ctx.fillText(name, L.x + 48, y);
   const nw = ctx.measureText(name).width;
 
-  ctx.fillStyle = SUB;
+  ctx.fillStyle = theme().sub;
   ctx.font = `11.5px ${FONT}`;
   const doing = m.state === "done" ? "done ✓"
     : m.tool ? `${m.tool}${m.toolDetail ? " " + m.toolDetail : ""}`

@@ -2,7 +2,11 @@
   --text: #EDEDF2;
   --muted: #9C9CA8;
   --faint: #6E6E7A;
+  --bg: #0B0B0F;
   --line: #25252E;
+  --surface: #15151B;
+  --raise: #1A1A21;
+  --hover: #22222B;
   --mint: #9DEBCB;
   --ok: #34D17A;
   --bad: #FF8A80;
@@ -29,7 +33,7 @@ button { font: inherit; }
   width: 28px; height: 28px; border-radius: 9px; border: 0; background: transparent; color: var(--muted);
   display: grid; place-items: center; cursor: pointer;
 }
-.hdr-btns button:hover { background: #1E1E26; color: var(--text); }
+.hdr-btns button:hover { background: var(--hover); color: var(--text); }
 
 .panel-body {
   position: absolute; top: 60px; left: 16px; right: 16px; bottom: 14px;
@@ -44,32 +48,116 @@ button { font: inherit; }
 .hint.ok { color: var(--ok); }
 .hint.bad { color: var(--bad); }
 
-.settings { display: flex; flex-direction: column; }
-.s-row { display: flex; align-items: center; gap: 12px; padding: 9px 2px; border-bottom: 1px solid var(--line); cursor: pointer; }
-.s-row.static { cursor: default; }
-.s-text { flex: 1; min-width: 0; }
-.s-field { padding: 9px 2px; border-bottom: 1px solid var(--line); display: flex; flex-direction: column; gap: 6px; }
-.s-field input {
-  background: #15151B; color: var(--text); border: 1px solid var(--line); border-radius: 9px;
-  padding: 6px 9px; font: inherit; outline: none; user-select: text;
+.settings { display: flex; flex-direction: column; gap: 8px; min-height: 100%; }
+
+.s-tabs {
+  display: flex; gap: 3px; padding: 3px; flex: none;
+  background: var(--surface); border: 1px solid var(--line); border-radius: 10px;
 }
-.s-field input:focus { border-color: #3B5F52; }
-.s-choices { display: flex; flex-wrap: wrap; gap: 6px; }
+.s-tabs button {
+  flex: 1; border: 0; border-radius: 7px; padding: 4px 8px; background: transparent;
+  color: var(--muted); cursor: pointer; transition: background 120ms, color 120ms;
+}
+.s-tabs button:hover { color: var(--text); }
+.s-tabs button.on { background: var(--hover); color: var(--text); font-weight: 600; }
+.tab-dot { display: inline-block; width: 6px; height: 6px; margin-left: 6px; border-radius: 50%; background: var(--bad); vertical-align: middle; }
+
+/* A section is a small caption over a card of rows. */
+.s-sec { display: flex; flex-direction: column; gap: 5px; flex: none; }
+.s-sec-h {
+  display: flex; justify-content: space-between; align-items: baseline; padding: 0 4px;
+  font-size: 10.5px; letter-spacing: 0.06em; text-transform: uppercase; color: var(--faint); font-weight: 600;
+}
+.s-aside { text-transform: none; letter-spacing: 0; font-weight: 400; color: var(--muted); font-size: 11px; }
+.s-card { background: var(--surface); border: 1px solid var(--line); border-radius: 12px; overflow: hidden; }
+.s-pad { padding: 10px; }
+.s-card > * + * { border-top: 1px solid var(--line); }
+
+.s-row { display: flex; align-items: center; gap: 12px; padding: 6px 10px 6px 12px; min-height: 38px; cursor: pointer; }
+.s-row:hover { background: rgba(255,255,255,0.02); }
+.s-row.static { cursor: default; }
+.s-row.static:hover { background: none; }
+.s-text { flex: 1; min-width: 0; }
+.s-text .hint { font-size: 11px; }
 .s-actions { display: flex; gap: 6px; flex: none; }
-.s-footer { display: flex; align-items: center; justify-content: space-between; padding-top: 12px; }
+
+.input, .select {
+  background: var(--raise); color: var(--text); border: 1px solid var(--line); border-radius: 8px;
+  padding: 5px 9px; font: inherit; outline: none;
+}
+.input { width: 190px; user-select: text; }
+.input:focus, .select:focus { border-color: #3B5F52; }
+.select {
+  appearance: none; cursor: pointer; padding-right: 26px; max-width: 200px;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6'%3E%3Cpath d='M1 1l4 4 4-4' fill='none' stroke='%239C9CA8' stroke-width='1.5' stroke-linecap='round'/%3E%3C/svg%3E");
+  background-repeat: no-repeat; background-position: right 9px center;
+}
+.select:hover { background-color: var(--hover); }
+
+/* Appearance: swatches for colour, picture tiles for what Pip wears, little
+   notches for the theme. */
+.s-choices { display: flex; flex-wrap: wrap; gap: 7px; }
+.swatch {
+  width: 22px; height: 22px; border-radius: 50%; border: 0; padding: 0; cursor: pointer;
+  box-shadow: inset 0 0 0 1px rgba(255,255,255,0.14); transition: transform 120ms, box-shadow 120ms;
+}
+.swatch:hover { transform: scale(1.12); }
+.swatch.on { box-shadow: 0 0 0 2px var(--surface), 0 0 0 4px var(--text); }
+
+.tiles { display: grid; grid-template-columns: repeat(6, minmax(0, 1fr)); gap: 6px; }
+.tiles.five { grid-template-columns: repeat(5, minmax(0, 1fr)); }
+.tile {
+  display: flex; flex-direction: column; align-items: center; gap: 1px; padding: 4px 2px 4px;
+  border: 1px solid transparent; border-radius: 10px; background: var(--raise); color: var(--muted);
+  font-size: 11px; cursor: pointer; transition: background 120ms, border-color 120ms;
+}
+.tile:hover { background: var(--hover); color: var(--text); }
+.tile.on { border-color: var(--mint); background: var(--hover); color: var(--text); }
+.tile span { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 100%; }
+canvas.preview { position: static; }
+
+.themes { display: grid; grid-template-columns: repeat(5, 1fr); gap: 6px; }
+.theme {
+  position: relative; height: 34px; border-radius: 0 0 12px 12px; border: 1px solid; border-top: 0;
+  font-size: 11px; cursor: pointer; overflow: hidden; transition: transform 120ms;
+}
+/* The mint line along the bottom, like the real notch's mood line. */
+.theme::after { content: ""; position: absolute; left: 22%; right: 22%; bottom: 0; height: 1.5px; background: var(--mint); opacity: 0.7; }
+.theme:hover { transform: translateY(1px); }
+.theme.on { outline: 2px solid var(--text); outline-offset: 2px; }
+
+/* Always in reach, however long the tab is. */
+.s-footer {
+  position: sticky; bottom: 0; margin-top: auto; flex: none;
+  display: flex; align-items: center; justify-content: space-between; gap: 8px;
+  padding: 10px 2px 0; background: var(--bg); border-top: 1px solid var(--line);
+}
+.s-footer .hint { display: flex; align-items: center; gap: 6px; }
+.link { border: 0; background: none; padding: 0; color: var(--mint); font: inherit; cursor: pointer; }
+.link:hover { text-decoration: underline; }
+.link:disabled { opacity: 0.5; cursor: default; text-decoration: none; }
 
 .btn {
-  display: inline-flex; align-items: center; gap: 6px; padding: 5px 11px; border-radius: 9px;
-  border: 1px solid var(--line); background: #1A1A21; color: var(--text); cursor: pointer;
+  display: inline-flex; align-items: center; gap: 6px; padding: 4px 11px; border-radius: 8px;
+  border: 1px solid var(--line); background: var(--raise); color: var(--text); cursor: pointer;
 }
-.btn:hover { background: #22222B; }
-.btn:disabled { opacity: 0.5; cursor: default; background: #1A1A21; }
-.btn.on { border-color: #3B5F52; background: #1C2A25; }
+.btn:hover { background: var(--hover); }
+.btn:disabled { opacity: 0.5; cursor: default; background: var(--raise); }
 
-.toggle { width: 36px; height: 21px; border-radius: 11px; border: 0; background: #2A2A33; position: relative; cursor: pointer; flex: none; transition: background 150ms; }
+/* A thin, quiet scrollbar for whenever a panel does run long. */
+.panel-body::-webkit-scrollbar { width: 6px; }
+.panel-body::-webkit-scrollbar-track { background: transparent; }
+.panel-body::-webkit-scrollbar-thumb { background: var(--hover); border-radius: 3px; }
+.panel-body::-webkit-scrollbar-button { display: none; }
+
+.toggle { width: 36px; height: 21px; border-radius: 11px; border: 0; background: var(--hover); position: relative; cursor: pointer; flex: none; transition: background 150ms; }
 .toggle i { position: absolute; top: 3px; left: 3px; width: 15px; height: 15px; border-radius: 50%; background: #fff; transition: transform 150ms; }
 .toggle.on { background: #3DBB74; }
 .toggle.on i { transform: translateX(15px); }
+.toggle.sm { width: 28px; height: 16px; }
+.toggle.sm i { top: 2px; left: 2px; width: 12px; height: 12px; }
+.toggle.sm.on i { transform: translateX(12px); }
+.mini-toggle { display: flex; align-items: center; gap: 6px; cursor: pointer; }
 
 /* ── inspector: what one session or subagent is doing, live ───────────────── */
 
@@ -86,7 +174,7 @@ button { font: inherit; }
 
 .insp-now {
   flex: none; display: flex; align-items: baseline; gap: 7px; min-width: 0;
-  background: #15151B; border: 1px solid var(--line); border-radius: 10px; padding: 8px 10px;
+  background: var(--surface); border: 1px solid var(--line); border-radius: 10px; padding: 8px 10px;
 }
 .insp-now.live { border-color: #2C4A5E; }
 .insp-now b { font-weight: 650; flex: none; }
@@ -122,9 +210,9 @@ button { font: inherit; }
 .insp-peers { flex: none; display: flex; gap: 6px; flex-wrap: wrap; padding-top: 2px; }
 .chip {
   display: inline-flex; align-items: center; gap: 5px; padding: 3px 8px; border-radius: 999px;
-  border: 1px solid var(--line); background: #15151B; color: var(--text); font-size: 11px; cursor: pointer;
+  border: 1px solid var(--line); background: var(--surface); color: var(--text); font-size: 11px; cursor: pointer;
 }
-.chip:hover { background: #22222B; }
+.chip:hover { background: var(--hover); }
 .chip-dot { width: 6px; height: 6px; border-radius: 50%; flex: none; }
 .chip.go { margin-left: auto; border-color: #2F4F43; color: var(--mint); }
 .chip.go:hover { background: #1B2B25; }

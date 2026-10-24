@@ -12,12 +12,23 @@ import * as engine from "../engine/index.js";
 import Settings from "./Settings.jsx";
 import Inspector from "./Inspector.jsx";
 import { CloseIcon, GearIcon } from "../shared/icons.jsx";
+import { THEMES, clean as cleanLook } from "../engine/look.js";
 
 const pip = window.pip;
 const PANELS = {
-  settings: { w: 460, h: 440 },
+  settings: { w: 460, h: 536 },
   inspect: { w: 520, h: 420 },
 };
+
+/** Hand the look to the engine (the canvas) and to CSS (the panels). */
+function applyLook(look) {
+  engine.setLook(look);
+  const th = THEMES[cleanLook(look).theme];
+  const root = document.documentElement.style;
+  for (const k of ["surface", "raise", "hover", "line"]) root.setProperty(`--${k}`, th[k]);
+  root.setProperty("--muted", th.sub);
+  root.setProperty("--bg", th.bg);
+}
 
 export default function App() {
   const canvasRef = useRef(null);
@@ -63,6 +74,7 @@ export default function App() {
       pip.onState((s) => {
         setState(s);
         engine.setMuted(s.settings.muted);
+        applyLook(s.settings.look);
         // An update finished downloading: Pip mentions it once, and waits.
         if (s.update && s.update.status === "ready" && !announced.current) {
           announced.current = true;
@@ -79,7 +91,7 @@ export default function App() {
       pip.onDemo(() => (engine.demoRunning() ? engine.stopDemo() : engine.demo())),
       pip.onAway((on) => engine.setAway(on)),
     ];
-    pip.state().then((s) => { setState(s); engine.setMuted(s.settings.muted); });
+    pip.state().then((s) => { setState(s); engine.setMuted(s.settings.muted); applyLook(s.settings.look); });
     if (new URLSearchParams(location.search).has("debug")) window.__pip = { engine, openPanel, closePanel };
     const onKey = (e) => { if (e.key === "Escape") closePanel(); };
     window.addEventListener("keydown", onKey);
