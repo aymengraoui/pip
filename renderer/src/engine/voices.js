@@ -4,8 +4,8 @@
 // Capri is the Project Capricorn construct from Night City: dozens of minds
 // folded into one, so she says "we" as often as "I". She is chaotic, a little
 // menacing and very fond of you; the slang is Night City's (choom, preem, nova,
-// gonk, flatline). Some moments only she has: chatter while idle, and what she
-// says when poked.
+// gonk, flatline). Some moments only she has: chatter while idle, what she says
+// when poked, and what she says while peeking in from the edge of the screen.
 //
 // Plain data, no engine imports (layer 0).
 
@@ -26,6 +26,15 @@ const VOICES = {
       "the satellite's still up there…", "bored. let's break something", "we could rewrite the net…",
       "i counted your tabs. too many", "still here. always here", "anyone wanna start a gig?",
       "the code is quiet. suspicious", "dozens of us, and nothing to do", "i hear static. i like it",
+    ],
+    peek: [
+      "psst. still here", "don't mind us", "i'm not hiding. you're hiding", "boo.",
+      "your wallpaper is suspicious", "we live in the margins now", "just passing through the net",
+      "who left all these windows open?", "nice cursor. can i have it?", "i see you, choom",
+      "we're bored. entertain us", "this pixel is mine now", "is that code? smells like bugs",
+      "the satellite says hi", "blink and we're gone", "one of us is watching. maybe all",
+      "rate my lurking 1-10", "free real estate", "i could crash something… for fun",
+      "you didn't see this", "hacking the side of your screen", "beep. boop. chaos",
     ],
     heat3: ["NCPD's onto us…", "getting hot, choom", "three strikes. ooh"],
     heat5: ["FIVE STARS! MaxTac inbound!", "max heat, choom!", "everything is ON FIRE ✦"],

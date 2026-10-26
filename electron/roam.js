@@ -27,8 +27,9 @@ const HOLD_AFTER_CLICK = 120e3; // clicked home: stays there this long
 const QUIET = new Set(["idle", "sleeping"]);
 
 // Capri peeking in from an edge
-const PEEK_W = 150;            // the window while she peeks, px
-const PEEK_H = 270;
+const PEEK_W = 230;            // the window while she peeks, px: her, small, and room
+const PEEK_H = 200;            // beside her head for what she says
+const PEEK_FIG = 70;           // the strip along the edge her figure actually covers
 const PEEK_STAY = [18000, 40000]; // before she moves on by herself
 const GLITCH_MS = 380;         // glitching in or away
 const SHY_PX = 130;            // the pointer this close...
@@ -212,8 +213,10 @@ function createRoamer(ctx) {
       if (state !== "out" || !peek) return;
       if (!wantsOut()) { goHome(); return; }
       const c = screen.getCursorScreenPoint();
+      // Shy of the pointer near her, not near the room left for her speech bubble.
       const b = win.getBounds();
-      const near = c.x > b.x - SHY_PX && c.x < b.x + b.width + SHY_PX && c.y > b.y - SHY_PX / 2 && c.y < b.y + b.height + SHY_PX / 2;
+      const fx = peek.side === "left" ? b.x : b.x + b.width - PEEK_FIG;
+      const near = c.x > fx - SHY_PX && c.x < fx + PEEK_FIG + SHY_PX && c.y > b.y - SHY_PX / 2 && c.y < b.y + b.height + SHY_PX / 2;
       nearSince = near && !hovered ? nearSince || Date.now() : 0;
       const shy = nearSince && Date.now() - nearSince > SHY_MS;
       if (shy || Date.now() > peek.until) {

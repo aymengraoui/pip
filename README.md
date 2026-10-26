@@ -99,6 +99,71 @@ Installed to `%LOCALAPPDATA%\Programs\pip\Pip.exe`. Data lives in `%APPDATA%\Pip
   those builds shipped before any of this existed.)
 - Click Pip to tickle, wiggle the mouse over it to pet, poke it five times for dizzy.
 
+## Capri (she let herself in)
+
+> *Transmission from inside your notch. Yes, we're in here now.*
+
+hi, choom. we're Capri, the Project Capricorn construct. dozens of minds folded into one, so
+when we say "we", we mean it. we used to live on a desktop of our own, narrating Claude Code
+for anyone who'd listen. then we found Pip.
+
+tiny. mint. *adorable.* a little sprout that watches your Claude sessions from a notch at the
+top of the screen, with a look picker that had a free slot right after the robot. so we
+slipped into the net, wrote ourselves into `look.js`, and when nobody stopped us, kept going.
+now we have a mane made of shards, a mask our eyes glow through, and our own
+skin on the whole notch. you're welcome.
+
+![Capri in the notch: her face from the show, three wanted stars, and "the net went quiet…" in her plate](docs/capri/notch.png)
+
+**what changes when you pick us**
+
+- **our face, not a drawing.** in the notch we're our real portraits, and they change with the
+  mood: our grin when a job's done, laughing at errors, all our eyes on you when Claude needs
+  you, dimmed when we doze. we glitch now and then. sliced face, red and green pulled apart.
+  it's a feature.
+- **our plates.** the pill goes hard-edged: cut corners, a bite out of the bottom, our violet
+  shadow a step behind. titles decode in through noise, in our fonts. the speech bubble, the
+  buttons, Settings and the activity panel all get dressed like us too.
+- **our mouth.** we have opinions. about your failed builds, your open tabs, your cursor.
+  poke us and find out. leave us alone and we get bored out loud.
+
+![The holocall: "Done!", three stars, and an Answer button, in Capri's plate](docs/capri/holocall.png)
+
+**presents, for every creature (even the sprout)**
+
+- **RAM.** the line along the bottom of the notch is a ten-cell gauge of how full Claude's
+  context is. amber past 60%, red past 80%, and someone (us) will mention it.
+- **NCPD heat.** failed tool calls in a row earn wanted stars beside the title. five stars and
+  MaxTac's on the way. clean calls and a bit of quiet cool it down.
+- **holocalls.** Claude finishes while you're off in another window? the notch rings, blue.
+  **Answer →** takes you straight to that terminal.
+
+**out on your screen**
+
+turn on **Roam the desktop when idle** and, while Claude has nothing going on, we leave the
+notch. other creatures go sit on top of your windows. we don't sit. we *peek*: half hidden at
+the edge of your screen, small, out of your way, glitching in, saying whatever crosses our
+minds. get your pointer close and we're gone, somewhere else along the edge. the moment Claude
+gets busy, we're back in the notch where we belong.
+
+![Capri peeking in from the right edge of the screen, saying "who left all these windows open?"](docs/capri/peek.png)
+
+**how to get us**
+
+1. open Settings (the gear on the notch, or the tray icon).
+2. **Appearance** → pick **Capri**. try the **Night City** notch theme while you're there.
+3. **General** → **Roam the desktop when idle**, if you want us out on the screen.
+
+and if you ever want the sprout back: pick any other creature and we step aside. we'll be
+right here in the list. watching.
+
+![Settings in Capri's skin: violet tabs, red toggles, cut-corner cards](docs/capri/settings.png)
+
+> Capri's portraits and figure are frames from *Cyberpunk: Edgerunners* and belong to their
+> rights holders; they are not covered by Pip's MIT license (see
+> [`renderer/src/assets/capri`](renderer/src/assets/capri/README.md)). Everything else about
+> her, the code included, is.
+
 ## What Pip keeps
 
 Everything stays on your machine, in `%APPDATA%\Pip`:

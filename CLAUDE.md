@@ -323,13 +323,17 @@ bottom of the screen. Any other mood brings it home at once, and so does a click
   title bar it sits on.
 - **It stops while suspended**, like everything else: game mode or Pause land it
   home and hide the window.
-- **Capri peeks instead of perching.** With her skin on, the window is 150×270 at
+- **Capri peeks instead of perching.** With her skin on, the window is 230×200 at
   the left or right edge of the screen, clear of the notch and the taskbar, and the
-  page draws her cut-out (`assets/capri/capri-full.png`) half hidden, leaning in,
-  glitching in and away (sliced, with red, green and violet ghosts) and flickering
-  now and then. The pointer lingering near her for 0.6 s sends her elsewhere, and
-  she moves on by herself every 18–40 s. Changing the look while she is out
-  brings her back and sends her out the new way.
+  page draws her cut-out (`assets/capri/capri-full.png`) small (150 px) and half
+  hidden, leaning in, glitching in and away (sliced, with red, green and violet
+  ghosts) and flickering now and then. The rest of the window is room for what
+  she says: a line from her `peek` voice a beat after she glitches in (most of
+  the time), then every 9–18 s, in her plate with a tail to her head. Only her
+  figure takes clicks and makes her shy (a strip 70 px wide along the edge), never
+  the bubble: the pointer lingering near her for 0.6 s sends her elsewhere, and she
+  moves on by herself every 18–40 s. Changing the look while she is out brings her
+  back and sends her out the new way.
 - **The page asks for its state** (`roam-ready`). It loads its code a moment after
   the window reports it has loaded, so whatever was sent before then was lost:
   the look, and on the first trip out everything else. The main process keeps
