@@ -21,6 +21,9 @@ const FILES = {
   grin: new URL("../assets/capri/capri-face.png", import.meta.url).href,
 };
 export const FACES = Object.keys(FILES);
+// These frames were cut from shots where she hangs upside down (her grin sits
+// above her eyes): they are turned the right way up when drawn.
+const FLIPPED = new Set(["calm", "aside", "smug", "wide", "look", "many"]);
 
 const images = {};
 
@@ -65,6 +68,7 @@ export function draw(x, y, size, o) {
   ctx.clip();
   ctx.fillStyle = "#170F1F";
   ctx.fillRect(-half, -half, size, size);
+  if (FLIPPED.has(o.face)) ctx.rotate(Math.PI);
   const g = o.glitch || 0;
   if (g > 0) {
     // A glitch: the face in horizontal slices, knocked sideways, red and green apart.

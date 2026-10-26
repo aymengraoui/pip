@@ -9,8 +9,13 @@
 // fast only while it is travelling; perched, it costs one poll a second. The
 // window only takes clicks over Pip itself (the page reports the hover), so it
 // never swallows a click meant for the title bar it sits on.
+//
+// Capri doesn't perch. With her skin on she peeks in from the left or right edge
+// of the screen, half hidden, out of the way of whatever you are doing: she
+// glitches in, lingers, glitches away when your pointer comes near, and turns
+// up somewhere else along an edge now and then.
 
-const { BrowserWindow } = require("electron");
+const { BrowserWindow, screen } = require("electron");
 const path = require("path");
 
 const SIZE = 96;               // the roaming window, px
@@ -20,6 +25,17 @@ const STROLL = [7000, 16000];  // between strolls along an edge
 const WALK_SPEED = 80;         // px per second
 const HOLD_AFTER_CLICK = 120e3; // clicked home: stays there this long
 const QUIET = new Set(["idle", "sleeping"]);
+
+// Capri peeking in from an edge
+const PEEK_W = 150;            // the window while she peeks, px
+const PEEK_H = 270;
+const PEEK_STAY = [18000, 40000]; // before she moves on by herself
+const GLITCH_MS = 380;         // glitching in or away
+const SHY_PX = 130;            // the pointer this close...
+const SHY_MS = 600;            // ...for this long, and she's gone
+const between = ([a, b]) => a + Math.random() * (b - a);
+// PIP_DEBUG=1: say what the roamer decides, on the console.
+const log = process.env.PIP_DEBUG === "1" ? (...a) => console.log("[roam]", ...a) : () => {};
 
 /**
  * ctx: {
@@ -42,7 +58,11 @@ function createRoamer(ctx) {
   let state = "home"; // home | out | moving
   let pos = null;     // Pip's feet, screen px
   let perch = null;   // { kind: "win", pid, x, y, w, dx } or { kind: "floor", y, x0, x1 }
+  let peek = null;    // Capri: { side, x, y, until } while she peeks from an edge
+  let hovered = false;
+  let nearSince = 0;
   const timers = {};
+  const isCapri = () => { const k = ctx.look() && ctx.look().kind; return k === "capri" || k === "construct"; };
 
   // ── the window ──────────────────────────────────────────────────────────────
 
@@ -58,7 +78,7 @@ function createRoamer(ctx) {
     win.setIgnoreMouseEvents(true, { forward: true });
     win.webContents.setWindowOpenHandler(() => ({ action: "deny" }));
     win.webContents.on("will-navigate", (e) => e.preventDefault());
-    win.webContents.on("did-finish-load", () => pose({ look: ctx.look() }));
+    if (process.env.PIP_DEBUG === "1") win.webContents.on("console-message", (e) => log("page:", e.message));
     ctx.load(win, "roam");
     return win;
   }
@@ -70,7 +90,9 @@ function createRoamer(ctx) {
     if (alive()) win.setBounds({ x: Math.round(p.x - SIZE / 2), y: Math.round(p.y - FEET), width: SIZE, height: SIZE });
   }
 
+  let shown = {}; // everything the page has been told, merged
   function pose(p) {
+    shown = { ...shown, ...p };
     if (alive()) win.webContents.send("roam-pose", p);
   }
 
@@ -146,10 +168,75 @@ function createRoamer(ctx) {
   const wantsOut = () => enabled && !paused && QUIET.has(mood)
     && Date.now() - quietSince >= LEAVE_AFTER && Date.now() >= holdUntil;
 
+  // ── Capri: peeking in from an edge ──────────────────────────────────────────
+
+  /** A spot along the left or right edge, clear of the notch and the taskbar. */
+  function peekSpot(notSide) {
+    const a = ctx.area();
+    const side = notSide ? (notSide === "left" ? "right" : "left") : Math.random() < 0.5 ? "left" : "right";
+    const top = a.y + 110, bottom = a.y + a.height - PEEK_H - 30;
+    const y = Math.round(top + Math.random() * Math.max(0, bottom - top));
+    return { side, x: side === "left" ? a.x : a.x + a.width - PEEK_W, y };
+  }
+
+  function peekAt(spot) {
+    log("peek at", spot);
+    peek = { ...spot, until: Date.now() + between(PEEK_STAY) };
+    nearSince = 0;
+    win.setBounds({ x: spot.x, y: spot.y, width: PEEK_W, height: PEEK_H });
+    pose({ mode: "peek", side: spot.side, enter: Date.now(), leave: 0, look: ctx.look() });
+  }
+
+  function peekOut() {
+    log("peek out");
+    ensureWin();
+    state = "moving";
+    ctx.onOut(true);
+    peekAt(peekSpot());
+    win.showInactive();
+    clearTimeout(timers.anim);
+    timers.anim = setTimeout(() => { timers.anim = null; state = "out"; peekWatch(); }, GLITCH_MS);
+  }
+
+  /** She glitches out of sight, then `next`. */
+  function glitchAway(next) {
+    pose({ leave: Date.now() });
+    clearTimeout(timers.anim);
+    timers.anim = setTimeout(() => { timers.anim = null; next(); }, GLITCH_MS);
+  }
+
+  /** Peeking: shy of the pointer, restless after a while. */
+  function peekWatch() {
+    clearTimeout(timers.watch);
+    timers.watch = setTimeout(() => {
+      if (state !== "out" || !peek) return;
+      if (!wantsOut()) { goHome(); return; }
+      const c = screen.getCursorScreenPoint();
+      const b = win.getBounds();
+      const near = c.x > b.x - SHY_PX && c.x < b.x + b.width + SHY_PX && c.y > b.y - SHY_PX / 2 && c.y < b.y + b.height + SHY_PX / 2;
+      nearSince = near && !hovered ? nearSince || Date.now() : 0;
+      const shy = nearSince && Date.now() - nearSince > SHY_MS;
+      if (shy || Date.now() > peek.until) {
+        state = "moving";
+        const from = peek.side;
+        glitchAway(() => {
+          if (!wantsOut()) { land(); return; }
+          peekAt(peekSpot(shy ? from : null));
+          clearTimeout(timers.anim);
+          timers.anim = setTimeout(() => { timers.anim = null; state = "out"; peekWatch(); }, GLITCH_MS);
+        });
+        return;
+      }
+      peekWatch();
+    }, 250);
+  }
+
   function goOut() {
+    if (isCapri()) { peekOut(); return; }
     ensureWin();
     state = "moving";
     place(ctx.home());
+    pose({ mode: "creature" });
     win.showInactive();
     ctx.onOut(true);
     perch = surface();
@@ -166,15 +253,19 @@ function createRoamer(ctx) {
     clearTimeout(timers.watch);
     clearTimeout(timers.stroll);
     if (state === "home") return;
+    if (peek && alive()) { state = "moving"; glitchAway(land); return; }
     if (!alive() || !pos) { land(); return; }
     state = "moving";
     hopTo(ctx.home(), land);
   }
 
   function land() {
+    log("land", state);
     stop();
     state = "home";
     perch = null;
+    peek = null;
+    hovered = false;
     if (alive()) {
       win.setIgnoreMouseEvents(true, { forward: true });
       win.hide();
@@ -224,6 +315,7 @@ function createRoamer(ctx) {
   }
 
   function evaluate() {
+    log("evaluate", { state, mood, enabled, paused, wantsOut: wantsOut(), capri: isCapri() });
     clearTimeout(timers.leave);
     if (state === "home" && wantsOut()) goOut();
     else if (state !== "home" && !wantsOut()) goHome();
@@ -249,7 +341,21 @@ function createRoamer(ctx) {
       if (!QUIET.has(mood) || !wasQuiet) quietSince = Date.now();
       evaluate();
     },
-    setLook(look) { pose({ look }); },
+    /**
+     * The page loads its code a moment after the window says it has loaded, so
+     * anything sent before then is lost; once it listens it asks, and gets it all.
+     */
+    ready() {
+      if (alive()) win.webContents.send("roam-pose", { ...shown, look: ctx.look() });
+    },
+    setLook(look) {
+      pose({ look });
+      // Picked Capri while Pip was out, or the other way round: back in, then out the new way.
+      if (state !== "home" && isCapri() !== !!peek) {
+        land();
+        evaluate();
+      }
+    },
     suspend() {
       paused = true;
       for (const t of Object.values(timers)) clearTimeout(t);
@@ -262,6 +368,7 @@ function createRoamer(ctx) {
     },
     /** The page says whether the cursor is over Pip: only then does the window take clicks. */
     hover(on) {
+      hovered = !!on;
       if (alive()) win.setIgnoreMouseEvents(!on, { forward: true });
     },
     /** Clicked: come home, and stay a while. */
@@ -277,4 +384,4 @@ function createRoamer(ctx) {
   };
 }
 
-module.exports = { createRoamer, SIZE, FEET };
+module.exports = { createRoamer, SIZE, FEET, PEEK_W, PEEK_H };

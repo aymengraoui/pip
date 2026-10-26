@@ -450,6 +450,7 @@ ipcMain.on("roam-mood", (_e, m) => {
 });
 ipcMain.on("roam-hover", (_e, on) => roamer?.hover(!!on));
 ipcMain.on("roam-click", () => roamer?.click());
+ipcMain.on("roam-ready", () => roamer?.ready());
 
 ipcMain.handle("state", () => publicState());
 ipcMain.handle("settings:set", (_e, patch) => {

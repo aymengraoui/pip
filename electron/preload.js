@@ -39,6 +39,8 @@ contextBridge.exposeInMainWorld("pip", {
   roamMood: (m) => ipcRenderer.send("roam-mood", m),
   roamHover: (on) => ipcRenderer.send("roam-hover", !!on),
   roamClick: () => ipcRenderer.send("roam-click"),
+  // the roaming page is listening now: send it everything it missed
+  roamReady: () => ipcRenderer.send("roam-ready"),
   checkUpdate: () => ipcRenderer.invoke("update:check"),
   installUpdate: () => ipcRenderer.invoke("update:install"),
 });
