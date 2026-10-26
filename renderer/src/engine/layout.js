@@ -8,13 +8,14 @@
 //   - which parts of the window take clicks (everything else is click-through)
 //   - the shape React needs so a panel can sit inside the notch
 
-import { clamp, lerp, project, Spring } from "./util.js";
+import { clamp, lerp, project, Spring, wall } from "./util.js";
 import { textWidth, FONT, W } from "./gfx.js";
 import { host, ui } from "./bridge.js";
-import { AGENT_TOOLS, agents, lead, mood, MOODS, sessions } from "./model.js";
+import { AGENT_TOOLS, agents, heatNow, lead, mood, MOODS, sessions } from "./model.js";
 import { pip, isOver as isOverPip } from "./pip.js";
 import { current as currentWorry } from "./watchdog.js";
 import { focusedKey } from "./inspector.js";
+import { isCapri, titleFont, subFont } from "./skin.js";
 import * as minis from "./minis.js";
 import { mouse } from "./pointer.js";
 
@@ -45,6 +46,12 @@ export let hoveredMini = null;
 export let hoveredRow = -1;
 // Where "Review" sits while Claude is waiting on you, or null.
 export let review = null;
+/** A holocall: { sid, pid, until } while Claude finished and you were elsewhere. */
+export let call = null;
+/** Its "Answer →" button, compact only, like review's. */
+export let answer = null;
+export function ring(c) { call = c; }
+export function hangUp() { call = null; answer = null; }
 
 let lastLayoutKey = "", lastHitKey = "";
 
@@ -111,9 +118,17 @@ function buildRows() {
 
 export function step(dt) {
   const tx = buildTexts();
-  const tw = Math.min(220, textWidth(tx.title, `600 13px ${FONT}`));
-  const sw = Math.min(220, textWidth(tx.sub, `11px ${FONT}`));
-  texts = { ...tx, textW: Math.max(tw, sw, 60) };
+  const tw = Math.min(220, textWidth(tx.title, titleFont(13)));
+  const sw = Math.min(220, textWidth(tx.sub, subFont(11)));
+  // Capri's wanted stars sit right after the title, so the text column makes room for them.
+  const stars = isCapri() ? heatNow() : 0;
+  texts = { ...tx, stars, textW: Math.max(tw + (stars ? 12 + stars * 11 : 0), sw, 60) };
+
+  // The call ends once you've answered it, or that session has moved on.
+  if (call) {
+    const st = sessions.get(call.sid)?.state;
+    if (wall() > call.until || !(st === "finished" || st === "idle")) hangUp();
+  }
 
   const live = [...agents.values()];
   // Out to play at two, back in the notch only once the last one has gone, so a
@@ -127,7 +142,9 @@ export function step(dt) {
   // Claude is waiting: the notch carries a way straight to the terminal, and
   // has to be wide enough to hold it.
   const asking = mood === "approval" && lead && lead.pid;
-  const compactW = clamp(58 + texts.textW + 16 + minisW + (asking ? 86 : 22), 230, 580);
+  // Her holocall: with anyone else picked there is no Answer button.
+  const calling = !asking && call && isCapri();
+  const compactW = clamp(58 + texts.textW + 16 + minisW + (asking || calling ? 86 : 22), 230, 580);
   rows = buildRows();
 
   const expanded = isExpanded();
@@ -145,6 +162,9 @@ export function step(dt) {
   // Compact only: once the notch is open, the rows and the panel say it better.
   review = asking && !panel && L.ex.v < 0.5
     ? { x: L.x + L.w.v - 80, y: 13, w: 68, h: 22, pid: lead.pid }
+    : null;
+  answer = calling && !panel && L.ex.v < 0.5
+    ? { x: L.x + L.w.v - 80, y: 13, w: 68, h: 22, pid: call.pid }
     : null;
 
   // Inspecting a helper puts that helper on stage and steps Pip aside: the one

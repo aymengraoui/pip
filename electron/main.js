@@ -16,6 +16,7 @@ const hooks = require("./hooks");
 const gamemode = require("./gamemode");
 const updater = require("./updater");
 const windows = require("./windows");
+const { createRoamer } = require("./roam");
 
 app.setName("Pip");
 app.setAppUserModelId("dev.local.pip");
@@ -45,7 +46,47 @@ let demoRunning = false;
 const timers = {};
 
 const tail = hooks.createTail();
+const context = require("./context");
+
+/**
+ * Capri picked in Appearance? Everything she brought (the RAM gauge, the
+ * holocall, roaming) is hers alone: with any other creature Pip does none of it,
+ * not even the work behind it. "construct" was her name before.
+ */
+function capriPicked() {
+  const kind = store.settings.get().look?.kind;
+  return kind === "capri" || kind === "construct";
+}
+
+/** Roaming the desktop: on in Settings, and Capri picked. */
+const roamOn = () => !!store.settings.get().roam && capriPicked();
+
+/** Each event that names a transcript carries how full that context is (`ctx`), for her RAM gauge. */
+function withContext(events) {
+  if (!capriPicked()) return events;
+  for (const e of events) {
+    if (!e || !e.tp) continue;
+    const c = context.of(e.tp);
+    if (c) e.ctx = c;
+  }
+  return events;
+}
+
+/**
+ * Is the terminal a session runs in behind something else right now? For the
+ * holocall: Claude finished while you were looking elsewhere. Anything unknown
+ * (no pid, no window, Pip itself in front) counts as no, so it never rings for nothing.
+ */
+function sessionAway(pid) {
+  if (!pid || !capriPicked()) return false;
+  const fg = windows.activeWindow(app.getAppMetrics().map((m) => m.pid));
+  const term = windows.windowFor(pid);
+  return !!(fg && term && fg.pid !== term.pid);
+}
 const send = (channel, payload) => { if (notch && !notch.isDestroyed()) notch.webContents.send(channel, payload); };
+
+// Capri out on the desktop (electron/roam.js), hers alone.
+let roamer = null;
 
 function load(win) {
   if (DEV) return win.loadURL("http://localhost:5173/index.html");
@@ -193,7 +234,7 @@ function createNotch() {
   notch.once("ready-to-show", () => notch.showInactive());
   notch.webContents.on("did-finish-load", () => {
     tail.seekTail();
-    send("events", { events: tail.pump(), replay: true });
+    send("events", { events: withContext(tail.pump()), replay: true });
     send("state", publicState());
   });
   notch.webContents.setWindowOpenHandler(() => ({ action: "deny" }));
@@ -260,13 +301,15 @@ function applyRunState(info = {}) {
     if (focusable) setFocusable(false);
     send("pause", true);
     if (notch && !notch.isDestroyed()) notch.hide();
+    roamer?.suspend();
   } else {
+    roamer?.resume();
     if (notch && !notch.isDestroyed()) notch.showInactive();
     send("pause", false);
     // Catch up quietly on whatever happened while hidden.
-    send("events", { events: tail.pump(), replay: true });
+    send("events", { events: withContext(tail.pump()), replay: true });
     clearInterval(timers.tail);
-    timers.tail = setInterval(() => { const ev = tail.pump(); if (ev.length) send("events", { events: ev, replay: false }); }, 200);
+    timers.tail = setInterval(() => { const ev = withContext(tail.pump()); if (ev.length) send("events", { events: ev, replay: false }); }, 200);
     clearTimeout(timers.cursor);
     cursorTick();
     clearTimeout(timers.idle);
@@ -412,12 +455,21 @@ ipcMain.on("menu", () => {
   ]).popup({ window: notch });
 });
 ipcMain.on("quit", () => app.quit());
+ipcMain.on("roam-mood", (_e, m) => {
+  if (!m || typeof m !== "object") return;
+  roamer?.setMood(String(m.mood || ""));
+});
+ipcMain.on("roam-hover", (_e, on) => roamer?.hover(!!on));
+ipcMain.on("roam-click", () => roamer?.click());
+ipcMain.on("roam-ready", () => roamer?.ready());
 
 ipcMain.handle("state", () => publicState());
 ipcMain.handle("settings:set", (_e, patch) => {
   store.settings.set(patch);
   // Pinning (or unpinning) moves the notch now, not on the next tick.
   if (patch && "screen" in patch && notch && !notch.isDestroyed()) { homeId = targetDisplay().id; placeNotch(); }
+  // Roaming is Capri's: turning it off, or picking anyone else, brings her home.
+  if (patch && ("roam" in patch || "look" in patch)) roamer?.setEnabled(roamOn());
   const s = publicState();
   send("state", s);
   return s;
@@ -431,6 +483,7 @@ ipcMain.handle("hooks:write", (_e, install) => {
 // Carry the terminal onto Pip's screen: raising it on a monitor you are not
 // looking at is indistinguishable from not raising it.
 ipcMain.handle("session:focus", (_e, pid) => windows.focusProcess(Number(pid) || 0, homeArea()));
+ipcMain.handle("session:away", (_e, pid) => { try { return sessionAway(Number(pid) || 0); } catch { return false; } });
 ipcMain.handle("update:check", async () => {
   await updater.check(true);
   const s = publicState();
@@ -453,6 +506,16 @@ app.whenReady().then(() => {
   Menu.setApplicationMenu(null);
   hooks.ensureHookFile();
   createNotch();
+  roamer = createRoamer({
+    load: (win, hash) => (DEV
+      ? win.loadURL(`http://localhost:5173/index.html#${hash}`)
+      : win.loadFile(path.join(__dirname, "..", "dist", "index.html"), { hash })),
+    area: homeArea,
+    look: () => store.settings.get().look,
+    onOut: (on) => send("roam", on),
+  });
+  roamer.setEnabled(roamOn());
+  if (suspended()) roamer.suspend();
   createTray();
   // A layout change can move the work area out from under us, or take the
   // screen away entirely: re-resolve rather than trusting the old id. A pinned
@@ -472,3 +535,4 @@ app.whenReady().then(() => {
 });
 
 app.on("window-all-closed", (e) => e.preventDefault());
+app.on("before-quit", () => roamer?.destroy());

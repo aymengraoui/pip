@@ -6,11 +6,12 @@
 
 import { clamp, easeOutBack, lerp, project } from "./util.js";
 import { ctx, ellipse, fit, FONT, W } from "./gfx.js";
-import { agents, mood, MOODS } from "./model.js";
-import { L, ROW_H, ROW_TOP, hoveredMini, hoveredRow, isPlaying, panelName, review, rows, texts } from "./layout.js";
+import { agents, lead, mood, MOODS } from "./model.js";
+import { L, ROW_H, ROW_TOP, answer, hoveredMini, hoveredRow, isPlaying, panelName, review, rows, texts } from "./layout.js";
 import { pip } from "./pip.js";
 import { current as currentBubble } from "./speech.js";
 import { theme } from "./look.js";
+import * as skin from "./skin.js";
 
 export function drawPill(t) {
   const x = L.x, w = L.w.v, h = L.h.v, r = Math.min(20, h / 2), e = 10;
@@ -20,37 +21,104 @@ export function drawPill(t) {
     // The one state worth glowing for.
     ctx.shadowColor = accent;
     ctx.shadowBlur = 12 + 10 * Math.sin(t * 5);
+  } else if (answer) {
+    // A holocall: a blue glow that rings in short bursts.
+    ctx.shadowColor = MOODS.working.accent;
+    ctx.shadowBlur = 8 + 12 * Math.max(0, Math.sin(t * 9)) * (Math.sin(t * 1.6) > 0 ? 1 : 0.3);
   } else {
     ctx.shadowColor = "rgba(0,0,0,0.45)";
     ctx.shadowBlur = 10;
     ctx.shadowOffsetY = 2;
   }
-  // A notch: square at the top where it meets the screen edge, round below,
-  // with a small outward curve on each side so it grows out of the bezel.
-  ctx.beginPath();
-  ctx.moveTo(x - e, 0);
-  ctx.quadraticCurveTo(x, 0, x, e);
-  ctx.lineTo(x, h - r);
-  ctx.arcTo(x, h, x + r, h, r);
-  ctx.lineTo(x + w - r, h);
-  ctx.arcTo(x + w, h, x + w, h - r, r);
-  ctx.lineTo(x + w, e);
-  ctx.quadraticCurveTo(x + w, 0, x + w + e, 0);
-  ctx.closePath();
+  if (skin.isCapri()) {
+    // Capri's plate: hard edges, cut corners, a jagged bite out of the bottom,
+    // and her violet copy a step down and to the right.
+    ctx.save();
+    ctx.shadowColor = "transparent";
+    ctx.translate(4, 4);
+    capriPlate(x, w, h);
+    ctx.fillStyle = skin.VIOLET;
+    ctx.globalAlpha = 0.9;
+    ctx.fill();
+    ctx.restore();
+    capriPlate(x, w, h);
+  } else {
+    // A notch: square at the top where it meets the screen edge, round below,
+    // with a small outward curve on each side so it grows out of the bezel.
+    ctx.beginPath();
+    ctx.moveTo(x - e, 0);
+    ctx.quadraticCurveTo(x, 0, x, e);
+    ctx.lineTo(x, h - r);
+    ctx.arcTo(x, h, x + r, h, r);
+    ctx.lineTo(x + w - r, h);
+    ctx.arcTo(x + w, h, x + w, h - r, r);
+    ctx.lineTo(x + w, e);
+    ctx.quadraticCurveTo(x + w, 0, x + w + e, 0);
+    ctx.closePath();
+  }
   ctx.fillStyle = theme().bg;
   ctx.fill();
   ctx.restore();
 
   // A soft accent line along the bottom edge: the mood, at a glance.
   const lw = Math.max(0, w - r * 2 - 10);
-  const grad = ctx.createLinearGradient(x + r, 0, x + r + lw, 0);
-  grad.addColorStop(0, "rgba(0,0,0,0)");
-  grad.addColorStop(0.5, accent);
-  grad.addColorStop(1, "rgba(0,0,0,0)");
-  ctx.globalAlpha = mood === "sleeping" ? 0.25 : 0.7;
-  ctx.fillStyle = grad;
-  ctx.fillRect(x + r + 5, h - 1.5, lw, 1.5);
+  const ram = skin.isCapri() && lead && lead.ram != null ? clamp(lead.ram, 0, 1) : null;
+  if (ram == null) {
+    const grad = ctx.createLinearGradient(x + r, 0, x + r + lw, 0);
+    grad.addColorStop(0, "rgba(0,0,0,0)");
+    grad.addColorStop(0.5, accent);
+    grad.addColorStop(1, "rgba(0,0,0,0)");
+    ctx.globalAlpha = mood === "sleeping" ? 0.25 : 0.7;
+    ctx.fillStyle = grad;
+    ctx.fillRect(x + r + 5, h - 1.5, lw, 1.5);
+  } else {
+    // Capri's RAM gauge, when Claude's context is known: ten cells, lit as far as
+    // it's full, in the mood's colour until it's getting crowded.
+    const cells = 10, gap = 3, cw = (lw - gap * (cells - 1)) / cells;
+    const lit = Math.max(1, Math.round(ram * cells));
+    const fill = ram >= 0.8 ? MOODS.error.accent : ram >= 0.6 ? MOODS.approval.accent : accent;
+    for (let i = 0; i < cells; i++) {
+      ctx.globalAlpha = i < lit ? (mood === "sleeping" ? 0.35 : 0.85) : 0.14;
+      ctx.fillStyle = i < lit ? fill : "#FFFFFF";
+      ctx.fillRect(x + r + 5 + i * (cw + gap), h - 2, cw, 2);
+    }
+  }
   ctx.globalAlpha = 1;
+}
+
+/** Capri's notch: flush with the bezel, cut corners below, a bite in the bottom edge. */
+function capriPlate(x, w, h) {
+  const c = 12, b = x + w * 0.62;
+  ctx.beginPath();
+  ctx.moveTo(x - 6, 0);
+  ctx.lineTo(x + w + 6, 0);
+  ctx.lineTo(x + w, 8);
+  ctx.lineTo(x + w, h - c);
+  ctx.lineTo(x + w - c, h);
+  ctx.lineTo(b + 11, h);
+  ctx.lineTo(b + 5, h - 6);
+  ctx.lineTo(b, h);
+  ctx.lineTo(x + c, h);
+  ctx.lineTo(x, h - c);
+  ctx.lineTo(x, 8);
+  ctx.closePath();
+}
+
+/** A button on the notch: round for Pip, cut corners for Capri. */
+function buttonPath(r, radius) {
+  if (skin.isCapri()) skin.plate(ctx, r.x, r.y, r.w, r.h, 6);
+  else { ctx.beginPath(); ctx.roundRect(r.x, r.y, r.w, r.h, radius); }
+}
+
+/** A five-pointed star, centred on x, y. */
+function starPath(x, y, r) {
+  ctx.beginPath();
+  for (let i = 0; i < 10; i++) {
+    const a = -Math.PI / 2 + (i * Math.PI) / 5;
+    const rr = i % 2 ? r * 0.45 : r;
+    ctx.lineTo(x + Math.cos(a) * rr, y + Math.sin(a) * rr);
+  }
+  ctx.closePath();
 }
 
 export function drawHeader(t) {
@@ -60,11 +128,45 @@ export function drawHeader(t) {
   const maxW = lerp(texts.textW, L.w.v - 72 - 132, ex);
   ctx.textBaseline = "alphabetic";
   ctx.fillStyle = "#FFFFFF";
-  ctx.font = `600 ${lerp(13, 14, ex)}px ${FONT}`;
-  ctx.fillText(fit(texts.title, maxW), tx, lerp(22, 28, ex));
+  ctx.font = skin.titleFont(lerp(13, 14, ex));
+  // Capri's title decodes in, letter by letter, behind a tail of noise.
+  const title = fit(skin.decoded(texts.title, t), maxW);
+  ctx.fillText(title, tx, lerp(22, 28, ex));
+  // Wanted stars: failed tool calls one after the other. Five, and they flash.
+  if (texts.stars) {
+    const sx = tx + ctx.measureText(title).width + 10;
+    const flash = texts.stars >= 5 && Math.sin(t * 10) > 0;
+    ctx.fillStyle = flash ? MOODS.working.accent : MOODS.error.accent;
+    for (let i = 0; i < texts.stars; i++) {
+      starPath(sx + i * 11, lerp(17, 23, ex), 4.5);
+      ctx.fill();
+    }
+    ctx.fillStyle = "#FFFFFF";
+  }
   ctx.fillStyle = theme().sub;
-  ctx.font = `11px ${FONT}`;
+  ctx.font = skin.subFont(11);
   ctx.fillText(fit(texts.sub, maxW), tx, lerp(38, 45, ex));
+
+  // "Answer" while a holocall rings: Claude finished while you were elsewhere.
+  if (answer) {
+    const a = answer;
+    const blue = MOODS.working.accent;
+    ctx.save();
+    ctx.globalAlpha = 1 - ex * 2;
+    buttonPath(a, 11);
+    ctx.fillStyle = "rgba(61,155,255,0.16)";
+    ctx.fill();
+    ctx.strokeStyle = blue;
+    ctx.lineWidth = 1;
+    ctx.stroke();
+    ctx.fillStyle = blue;
+    ctx.font = `600 11px ${FONT}`;
+    ctx.textAlign = "center";
+    ctx.fillText("Answer →", a.x + a.w / 2, a.y + 15);
+    ctx.textAlign = "left";
+    ctx.restore();
+    return;
+  }
 
   // "Review" while Claude is waiting: one click to the terminal that is asking.
   if (review) {
@@ -72,8 +174,7 @@ export function drawHeader(t) {
     const accent = MOODS.approval.accent;
     ctx.save();
     ctx.globalAlpha = 1 - ex * 2;
-    ctx.beginPath();
-    ctx.roundRect(r.x, r.y, r.w, r.h, 11);
+    buttonPath(r, 11);
     ctx.fillStyle = "rgba(255,159,10,0.14)";
     ctx.fill();
     ctx.strokeStyle = accent;
@@ -148,13 +249,13 @@ function drawSessionRow(s, y, right) {
   ctx.fillStyle = MOODS[s.state].accent;
   ellipse(L.x + 32, y - 4, 4, 4);
   ctx.fillStyle = "#FFFFFF";
-  ctx.font = `600 12px ${FONT}`;
+  ctx.font = skin.bodyFont(12);
   const name = fit(project(s.cwd) || "session", 140);
   ctx.fillText(name, L.x + 48, y);
   const nw = ctx.measureText(name).width;
 
   ctx.fillStyle = theme().sub;
-  ctx.font = `11.5px ${FONT}`;
+  ctx.font = skin.subFont(11.5);
   let what = MOODS[s.state].label;
   if (s.state === "working" && s.tool) what = s.tool;
   const extra = s.detail && s.state !== "finished" ? ` · ${s.detail}` : "";
@@ -164,13 +265,13 @@ function drawSessionRow(s, y, right) {
 function drawAgentRow(m, y, right) {
   // The sproutling itself stands at L.x + 32 on this line (see layout.js).
   ctx.fillStyle = `hsl(${m.hue},75%,76%)`;
-  ctx.font = `600 12px ${FONT}`;
+  ctx.font = skin.bodyFont(12);
   const name = fit(m.type, 130);
   ctx.fillText(name, L.x + 48, y);
   const nw = ctx.measureText(name).width;
 
   ctx.fillStyle = theme().sub;
-  ctx.font = `11.5px ${FONT}`;
+  ctx.font = skin.subFont(11.5);
   const doing = m.state === "done" ? "done ✓"
     : m.tool ? `${m.tool}${m.toolDetail ? " " + m.toolDetail : ""}`
     : m.desc || "working";
@@ -206,7 +307,8 @@ export function drawBubble(t) {
   const k = clamp((t - t0) / 0.18, 0, 1);
   const fade = clamp((until - t) / 0.25, 0, 1);
   const sc = easeOutBack(k);
-  ctx.font = `600 12px ${FONT}`;
+  const capri = skin.isCapri();
+  ctx.font = skin.bodyFont(12);
   const label = fit(text, 300);
   const bw = ctx.measureText(label).width + 18, bh = 24;
   // Close enough that the tail can bridge the gap and touch whoever is talking:
@@ -229,19 +331,41 @@ export function drawBubble(t) {
   ctx.translate(x, by);
   ctx.scale(sc, sc);
   ctx.translate(-x, -by);
-  ctx.shadowColor = "rgba(0,0,0,0.3)";
-  ctx.shadowBlur = 8;
-  ctx.fillStyle = "#FFFFFF";
-  ctx.beginPath();
-  ctx.roundRect(bx, by, bw, bh, 11);
-  if (tail) {
-    ctx.moveTo(x - 6, by + 1);
-    ctx.lineTo(x, by - tail);
-    ctx.lineTo(x + 6, by + 1);
+  if (capri) {
+    // Her transmissions: a dark cut-corner plate, her violet copy behind it, a
+    // red bar down the left, and a jagged tail.
+    const plate = (dx) => {
+      skin.plate(ctx, bx + dx, by + dx, bw, bh, 7);
+      if (tail) {
+        ctx.moveTo(x - 5 + dx, by + 1 + dx);
+        ctx.lineTo(x + 2 + dx, by - tail + dx);
+        ctx.lineTo(x - 1 + dx, by - tail * 0.45 + dx);
+        ctx.lineTo(x + 6 + dx, by + 1 + dx);
+      }
+    };
+    plate(3);
+    ctx.fillStyle = skin.VIOLET;
+    ctx.fill();
+    plate(0);
+    ctx.fillStyle = "#130D1A";
+    ctx.fill();
+    ctx.fillStyle = skin.RED;
+    ctx.fillRect(bx + 3, by + 5, 2, bh - 10);
+  } else {
+    ctx.shadowColor = "rgba(0,0,0,0.3)";
+    ctx.shadowBlur = 8;
+    ctx.fillStyle = "#FFFFFF";
+    ctx.beginPath();
+    ctx.roundRect(bx, by, bw, bh, 11);
+    if (tail) {
+      ctx.moveTo(x - 6, by + 1);
+      ctx.lineTo(x, by - tail);
+      ctx.lineTo(x + 6, by + 1);
+    }
+    ctx.fill();
+    ctx.shadowBlur = 0;
   }
-  ctx.fill();
-  ctx.shadowBlur = 0;
-  ctx.fillStyle = "#1B1B22";
+  ctx.fillStyle = capri ? skin.PAPER : "#1B1B22";
   ctx.textBaseline = "middle";
   ctx.fillText(label, bx + 9, by + bh / 2 + 0.5);
   ctx.textBaseline = "alphabetic";

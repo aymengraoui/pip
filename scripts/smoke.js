@@ -10,14 +10,15 @@
 // see the "smoke" script in package.json.
 
 import * as engine from "../renderer/src/engine/index.js";
-import { agents, sessions, history } from "../renderer/src/engine/model.js";
+import { agents, sessions, history, heatNow } from "../renderer/src/engine/model.js";
 import { viewOf } from "../renderer/src/engine/minis.js";
-import { L, review, isPinned } from "../renderer/src/engine/layout.js";
+import { L, review, isPinned, call, texts } from "../renderer/src/engine/layout.js";
 import * as watchdog from "../renderer/src/engine/watchdog.js";
 import { pip } from "../renderer/src/engine/pip.js";
 import * as gfx from "../renderer/src/engine/gfx.js";
 import { host } from "../renderer/src/engine/bridge.js";
-import { ACCESSORIES, BODIES, KINDS, THEMES, get as getLook } from "../renderer/src/engine/look.js";
+import { isCapri } from "../renderer/src/engine/skin.js";
+import { ACCESSORIES, BODIES, KINDS, THEMES, get as getLook, clean as cleanLook } from "../renderer/src/engine/look.js";
 
 // -- virtual clock, so 10 minutes of Pip take 20 ms ---------------------------
 
@@ -520,6 +521,67 @@ check("the parent turn ending does not end it either", livebg() === 1, String(li
 feedbg([{ ev: "SubagentStop", aid: "abg1" }]);
 advance(200);
 check("its own SubagentStop does", livebg() === 0, String(livebg()));
+
+// -- heat, RAM and the holocall ------------------------------------------------
+
+const sidh = "smoke-hud";
+const feedh = (events, replay = false) => engine.ingest({ events: events.map((e) => ({ t: Date.now(), sid: sidh, cwd, pid: 4242, ...e })), replay });
+const failed = { ev: "PostToolUseFailure", tool: "Bash", detail: "npm test" };
+const passed = { ev: "PostToolUse", tool: "Bash", detail: "npm test" };
+
+feedh([{ ev: "UserPromptSubmit", msg: "fix the tests" }, failed, failed, failed]);
+advance(200);
+check("three failed calls in a row are three stars", heatNow() === 3, String(heatNow()));
+feedh([passed, passed, passed]);
+advance(200);
+check("three clean calls take one off", heatNow() === 2, String(heatNow()));
+advance(200e3);
+check("and the rest fade on their own", heatNow() === 0, String(heatNow()));
+
+feedh([{ ev: "PreToolUse", tool: "Read", detail: "a.js", ctx: { used: 170000, max: 200000 } }]);
+advance(200);
+const ram = sessions.get(sidh)?.ram;
+check("a session knows how full its context is", Math.abs(ram - 0.85) < 1e-9, String(ram));
+
+// The HUD is Capri's: with the sprout there are no stars and no holocall.
+const awayBefore = host.isAway;
+host.isAway = () => true;
+feedh([failed, failed, failed]);
+advance(300);
+check("with another creature, no wanted stars on the notch", !texts.stars, String(texts.stars));
+feedh([{ ev: "Stop" }]);
+await null; await null;
+advance(300);
+check("and no holocall", !call, JSON.stringify(call));
+engine.setLook({ kind: "capri" });
+advance(300);
+check("with Capri, her stars are there", texts.stars === 3, String(texts.stars));
+feedh([{ ev: "UserPromptSubmit", msg: "again" }, { ev: "Stop" }]);
+await null; await null; // isAway answers asynchronously
+advance(300);
+check("finishing while you're elsewhere rings", !!call && call.sid === sidh, JSON.stringify(call));
+feedh([{ ev: "UserPromptSubmit", msg: "next" }]);
+advance(300);
+check("a new prompt in that session hangs up", !call, JSON.stringify(call));
+host.isAway = () => false;
+feedh([{ ev: "Stop" }]);
+await null; await null;
+advance(300);
+check("finishing while you're looking at it doesn't", !call, JSON.stringify(call));
+host.isAway = awayBefore;
+engine.setLook({ kind: "sprout" });
+advance(300);
+
+// -- Capri's skin ---------------------------------------------------------------
+
+engine.setLook({ kind: "capri" });
+advance(1500);
+check("picking Capri puts her skin on the notch", isCapri());
+engine.setLook({ kind: "sprout" });
+advance(300);
+check("any other creature takes it off again", !isCapri());
+const after = cleanLook({ kind: "kitty", body: "crimson", theme: "nightcity" });
+check("her coat and theme go with her", after.body === KINDS.kitty.body && after.theme === "midnight", JSON.stringify(after));
 
 console.log(failures ? `\n${failures} check(s) failed` : "\nall checks passed");
 process.exit(failures ? 1 : 0);

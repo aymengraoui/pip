@@ -70,7 +70,7 @@ Import layers inside `renderer/src/engine/` — **imports only ever point down**
 which is what keeps this graph a DAG and the modules testable:
 
 ```
- 0  util  gfx  clock  bridge  sound  speech  pointer  look (no engine imports)
+ 0  util  gfx  clock  bridge  sound  speech  pointer  look  voices (no engine imports)
  1  particles  critters  creature  model                  (-> layer 0; creature -> critters)
  2  pip                                                   (-> model, creature, …)
  3  minis  inspector                                      (-> pip, model)
@@ -246,6 +246,98 @@ polled every 15 s from the main process and off entirely in game mode. Past thre
 minutes you are away, and `model.totals` is snapshotted; on return the difference
 becomes one spoken line. One line, once — no badge, no list to dismiss.
 
+## Capri's skin
+
+Picking **Capri** in Appearance does more than change the creature: the whole
+notch takes her look, and picking any other creature takes it off. There is no
+separate switch; `skin.isCapri()` is just `look.get().kind === "capri"` (and
+`capriPicked()` in `main.js` for the main process).
+
+**Everything she brought is hers alone.** With any other creature picked Pip
+behaves exactly as it did before she arrived: no RAM gauge, no stars, no
+holocall, no roaming (its switch isn't even shown), her Crimson coat and Night
+City theme aren't offered (`look.offered`) and a saved look drops them
+(`look.clean`), and the main process doesn't read transcripts or ask where your
+windows are. Keep it that way: anything new for her checks `isCapri()` (or
+`capriPicked()`), and the smoke test checks the sprout sees none of it.
+
+- **Her face, not a drawing.** In the notch she is one of her portraits from the
+  show (`renderer/src/assets/capri/`, drawn by `engine/portrait.js` in a cut-corner
+  frame with a violet copy behind it), picked per mood and emote (`capriFace` in
+  `pip.js`). Until an image has loaded, or with no `Image` at all (the smoke
+  test), she is drawn like any other kind, by `critters.js`; helpers, the roaming
+  window and the Settings tiles always use the drawn one. **The art is not
+  covered by the MIT license** (see the README in that folder).
+- **Her plates.** The pill is a hard-edged plate with cut corners, a bite out of
+  the bottom edge and her violet misregistered copy; buttons and the speech
+  bubble follow (`render.js`, `skin.plate`). Her fonts are Chakra Petch for words
+  and JetBrains Mono for the line under the title and the rows (`skin.titleFont`,
+  `subFont`, `bodyFont`; `layout.js` measures with the same ones). The title
+  decodes in behind a tail of noise when it changes (`skin.decoded`, 30 fps while
+  it does).
+- **Her chaos.** Her own lines for every moment, plus two only she has: chatter
+  when idle and lines when poked (`voices.js`). She glitches (sliced face, red and
+  green split) every 6–16 s while awake, on a poke, and for a second on an error.
+- **The panels** take her skin from CSS: `App.jsx` sets `data-skin="capri"` on the
+  root and `notch.css` restyles cards, tabs, toggles and buttons under it.
+- A look saved as `construct` (her name before) is read as `capri` (`RENAMED` in
+  `look.js`).
+
+## Her HUD: RAM, heat and the holocall
+
+Three things on the pill, Capri's only, each one line of state in the model and
+a few strokes in `render.js`:
+
+- **RAM.** `hook.js` records `tp`, the session's transcript path. While Capri is
+  picked the main process reads the token counts of the last answer from its tail
+  (`electron/context.js`, cached a few seconds per file) and puts
+  `ctx: {used, max}` on the events it sends (`withContext`). `model.noteRam` keeps
+  it as `s.ram`, and the pill's bottom accent line becomes ten cells, lit as far
+  as the lead session's context is full: the mood's colour, amber past 60 %, red
+  past 80 %. Past 80 % she says so once (`reactions.onRam`), and again only after
+  it has dropped under 50 % (a compaction). The 1M window isn't written in the
+  transcript, so past 200k used it is assumed.
+- **Heat.** Failed tool calls one after the other are wanted stars, up to five,
+  drawn right after the title. Three clean calls take one off and a star fades
+  every 90 s. The model counts them for everyone (`heatNow`, aged by the events'
+  own `t`, so a replay can't bring old stars back); only Capri shows them and
+  talks about them.
+- **The holocall.** With Capri picked, a live `Stop` asks the main process
+  whether that session's terminal is behind something else (`host.isAway` →
+  `sessionAway`: the window in front versus `windows.windowFor(pid)`, by pid). If
+  it is, the pill glows blue and carries "Answer →" (`layout.answer`), which
+  raises the terminal like Review does. It hangs up when that session moves on,
+  or after a minute. Unknown counts as not away, so it never rings for nothing;
+  never on a replay, never in the demo.
+
+## Capri out on the desktop
+
+With Capri picked and `settings.roam` on (off by default; the switch in Settings →
+General only shows while she is picked), she leaves the notch while Claude is
+quiet: idle or napping for 8 s. No other creature roams.
+
+- **She peeks.** Her window (`electron/roam.js`, 230×200) sits at the left or right
+  edge of the screen, clear of the notch and the taskbar. The page
+  (`renderer/src/roam/roam.js`, the `#roam` hash of the same build) draws her
+  cut-out (`assets/capri/capri-full.png`) small (150 px) and half hidden, leaning
+  in, glitching in and away (sliced, with red, green and violet ghosts) and
+  flickering now and then. The rest of the window is room for what she says: a
+  line from her `peek` voice a beat after she glitches in (most of the time), then
+  every 9–18 s, in her plate with a tail to her head.
+- **Shy, and never in the way.** Only her figure takes clicks and makes her shy (a
+  strip 70 px wide along the edge), never the bubble: the window ignores the mouse
+  except while the page reports the cursor over her (`roam-hover`). The pointer
+  lingering near her for 0.6 s sends her elsewhere, and she moves on by herself
+  every 18–40 s. A click brings her home for two minutes.
+- **Home at once** when Claude gets busy, when roaming is turned off, when any
+  other creature is picked (`setEnabled(roamOn())`), and while suspended (game
+  mode, Pause). The notch keeps the status meanwhile: `pip.setOut` shrinks her out
+  of it on her own intro spring and turns her hit test off.
+- **The page asks for its state** (`roam-ready`). It loads its code a moment after
+  the window reports it has loaded, so whatever was sent before then would be lost;
+  the main process keeps all of it merged and answers with it. `PIP_DEBUG=1` logs
+  the roamer's decisions.
+
 ## Which screen Pip lives on
 
 `placeNotch` follows the work, not the OS: `windows.activeWindow()` reads the
@@ -338,6 +430,8 @@ add `--focus` to actually raise it.
 | right click | native menu from the main process | `bridge.host.menu` |
 | Go to terminal (in the panel) | raise the terminal that session runs in | `windows.focusProcess` |
 | Review → (on the notch, while waiting) | the same, one click from anywhere | `layout.review` + `input.js` |
+| Answer → (on the notch, while a holocall rings) | the same, for the session that just finished | `layout.answer` + `input.js` |
+| Capri, out roaming the desktop | come home, and stay home for two minutes | `roam.js` `click` |
 | gear, tray, 2nd instance | Settings | `send("panel", …)` |
 | tray → Activity | inspector on the busiest session | `engine.inspectLead` |
 
@@ -444,7 +538,8 @@ happens once.
   leaves use so every mood still reads; helpers are drawn as the same kind. An
   accessory needs a case in `creature.drawAccessory`, beside the sprout or
   antenna, never on top of it. Themes stay dark: the notch grows
-  out of the bezel. `look.set` drops names it doesn't know, so a setting saved by
+  out of the bezel. A creature can also have its own voice: lines per moment in
+  `engine/voices.js`; any moment it leaves out falls back to Pip's own lines in `pip.js`. `look.set` drops names it doesn't know, so a setting saved by
   a newer version can't break an older one.
 - `W`/`H` in `engine/gfx.js` must stay in sync with `electron/main.js`.
 - Keep `koffi` under `asarUnpack` in `package.json`, or game mode dies in the

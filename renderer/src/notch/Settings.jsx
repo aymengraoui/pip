@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import * as engine from "../engine/index.js";
-import { ACCESSORIES, BODIES, KINDS, THEMES, clean as cleanLook } from "../engine/look.js";
+import { ACCESSORIES, BODIES, KINDS, THEMES, clean as cleanLook, offered } from "../engine/look.js";
 
 const pip = window.pip;
 const clean = (err) => String(err?.message || err).replace(/^Error invoking remote method '[^']+': (Error: )?/, "");
@@ -91,7 +91,7 @@ function Appearance({ look, onChange }) {
   return (
     <>
       <Section title="Creature">
-        <div className="s-pad tiles five">
+        <div className="s-pad tiles">
           {Object.entries(KINDS).map(([id, k]) => (
             // Each comes in its usual coat; the swatches below can change it after.
             <Tile key={id} on={l.kind === id} name={k.name} look={{ ...l, kind: id, body: k.body }} onClick={() => onChange({ kind: id, body: k.body })} />
@@ -108,7 +108,7 @@ function Appearance({ look, onChange }) {
         )}
       >
         <div className="s-pad s-choices">
-          {Object.entries(BODIES).map(([id, b]) => (
+          {offered(BODIES, l.kind).map(([id, b]) => (
             <button
               key={id} title={b.name} aria-label={b.name}
               className={`swatch ${l.body === id ? "on" : ""}`}
@@ -127,7 +127,7 @@ function Appearance({ look, onChange }) {
       </Section>
       <Section title="Notch" aside={THEMES[l.theme]?.name}>
         <div className="s-pad themes">
-          {Object.entries(THEMES).map(([id, th]) => (
+          {offered(THEMES, l.kind).map(([id, th]) => (
             <button
               key={id} title={th.name}
               className={`theme ${l.theme === id ? "on" : ""}`}
@@ -189,6 +189,10 @@ export default function Settings({ state, demoOn, onDemo, onStopDemo }) {
           <Section title="Pip">
             <Toggle label="Start with Windows" on={state.startup} onChange={(on) => pip.setStartup(on)} />
             <Toggle label="Sounds" on={!s.muted} onChange={(on) => set({ muted: !on })} />
+            {/* Roaming is Capri's: the switch is only there while she is picked. */}
+            {cleanLook(s.look).kind === "capri" && (
+              <Toggle label="Roam the desktop when idle" on={!!s.roam} onChange={(on) => set({ roam: on })} />
+            )}
             <ScreenPicker displays={state.displays || []} value={s.screen} onChange={(screen) => set({ screen })} />
           </Section>
           <Section title="Game mode" aside={state.gaming ? "asleep: a game is running" : null}>

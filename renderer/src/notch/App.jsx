@@ -28,6 +28,8 @@ function applyLook(look) {
   for (const k of ["surface", "raise", "hover", "line"]) root.setProperty(`--${k}`, th[k]);
   root.setProperty("--muted", th.sub);
   root.setProperty("--bg", th.bg);
+  // Capri gives the panels her skin too (notch.css, [data-skin="capri"]).
+  document.documentElement.dataset.skin = cleanLook(look).kind === "capri" ? "capri" : "pip";
 }
 
 export default function App() {
@@ -62,7 +64,7 @@ export default function App() {
   useEffect(() => {
     engine.init(
       canvasRef.current,
-      { setHitRects: pip.setHitRects, setWinHeight: pip.setWinHeight, menu: pip.menu, focusSession: pip.focusSession, setWaiting: pip.setWaiting, startDrag: pip.startDrag, stopDrag: pip.stopDrag },
+      { setHitRects: pip.setHitRects, setWinHeight: pip.setWinHeight, menu: pip.menu, focusSession: pip.focusSession, isAway: pip.isAway, roamMood: pip.roamMood, setWaiting: pip.setWaiting, startDrag: pip.startDrag, stopDrag: pip.stopDrag },
       {
         onLayout: setLayout,
         onInspect: (target) => (target ? openPanel("inspect") : closePanel()),
@@ -91,6 +93,7 @@ export default function App() {
       pip.onDemo(() => (engine.demoRunning() ? engine.stopDemo() : engine.demo())),
       pip.onAway((on) => engine.setAway(on)),
       pip.onDragEnd((r) => engine.dragEnded(r)),
+      pip.onRoam((on) => engine.setRoaming(on)),
     ];
     pip.state().then((s) => { setState(s); engine.setMuted(s.settings.muted); applyLook(s.settings.look); });
     if (new URLSearchParams(location.search).has("debug")) window.__pip = { engine, openPanel, closePanel };

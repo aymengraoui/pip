@@ -222,3 +222,73 @@ canvas.preview { position: static; }
   border: 1px solid #5A3A20; background: #1C1611; border-radius: 10px;
 }
 .insp-worry b { color: #FFB169; font-weight: 650; }
+
+/* ── Capri's skin ─────────────────────────────────────────────────────────────
+   Picking Capri in Appearance gives the panels her look as well as the notch:
+   hard edges with cut corners, her fonts (Chakra Petch for words, JetBrains Mono
+   for labels), violet, red and her mask's green. Any other creature drops it. */
+:root[data-skin="capri"] {
+  --mint: #36FF7A;
+  --ok: #36FF7A;
+  --bad: #FF3B5C;
+  --violet: #7A3CFF;
+  --cut: polygon(7px 0, 100% 0, 100% calc(100% - 7px), calc(100% - 7px) 100%, 0 100%, 0 7px);
+}
+:root[data-skin="capri"] body { font-family: "Chakra Petch", "Segoe UI", sans-serif; }
+:root[data-skin="capri"] .s-sec-h,
+:root[data-skin="capri"] .insp-label,
+:root[data-skin="capri"] .insp-tag,
+:root[data-skin="capri"] .s-tabs button,
+:root[data-skin="capri"] .btn,
+:root[data-skin="capri"] .hint {
+  font-family: "JetBrains Mono", Consolas, monospace;
+}
+:root[data-skin="capri"] .s-sec-h { color: var(--violet); letter-spacing: 0.14em; }
+:root[data-skin="capri"] .s-tabs { border-radius: 0; clip-path: var(--cut); }
+:root[data-skin="capri"] .s-tabs button { border-radius: 0; text-transform: uppercase; letter-spacing: 0.08em; font-size: 10.5px; }
+:root[data-skin="capri"] .s-tabs button.on { background: var(--violet); color: #fff; }
+:root[data-skin="capri"] .s-card {
+  border-radius: 0; clip-path: var(--cut); border-color: #3A2650;
+  box-shadow: inset 2px 0 0 var(--violet);
+}
+:root[data-skin="capri"] .btn {
+  border-radius: 0; clip-path: var(--cut); text-transform: uppercase; letter-spacing: 0.06em; font-size: 10.5px;
+}
+:root[data-skin="capri"] .btn:hover { background: var(--violet); }
+:root[data-skin="capri"] .toggle,
+:root[data-skin="capri"] .toggle i { border-radius: 0; }
+:root[data-skin="capri"] .toggle.on { background: #FF3B5C; }
+:root[data-skin="capri"] .tile { border-radius: 0; clip-path: var(--cut); }
+:root[data-skin="capri"] .tile.on { border-color: var(--violet); box-shadow: inset 0 -2px 0 #FF3B5C; }
+:root[data-skin="capri"] .themes { grid-template-columns: repeat(6, 1fr); } /* her Night City is the sixth */
+:root[data-skin="capri"] .theme { border-radius: 0; clip-path: polygon(0 0, 100% 0, 100% calc(100% - 7px), calc(100% - 7px) 100%, 7px 100%, 0 calc(100% - 7px)); }
+:root[data-skin="capri"] .input,
+:root[data-skin="capri"] .select { border-radius: 0; }
+:root[data-skin="capri"] .insp-row { border-bottom-color: #2A1B38; }
+:root[data-skin="capri"] .pulse { border-radius: 0; background: #FF3B5C; }
+
+/* The Inspector under her skin: the "Go to terminal" button, the stuck warning
+   ("Going in circles"…) and the "doing now" line, as her plates. */
+:root[data-skin="capri"] .chip {
+  border-radius: 0; clip-path: var(--cut); font-family: "JetBrains Mono", Consolas, monospace;
+  text-transform: uppercase; letter-spacing: 0.06em; font-size: 10px; border-color: #3A2650;
+}
+:root[data-skin="capri"] .chip-dot,
+:root[data-skin="capri"] .insp-dot { border-radius: 0; }
+:root[data-skin="capri"] .chip.go { background: var(--violet); border-color: var(--violet); color: #fff; font-weight: 600; }
+:root[data-skin="capri"] .chip.go::after { content: "▸"; margin-left: 2px; }
+:root[data-skin="capri"] .chip.go:hover { background: #FF3B5C; border-color: #FF3B5C; }
+:root[data-skin="capri"] .insp-tag { border-radius: 0; font-family: "JetBrains Mono", Consolas, monospace; }
+:root[data-skin="capri"] .insp-now { border-radius: 0; clip-path: var(--cut); border-color: #3A2650; }
+:root[data-skin="capri"] .insp-now.live { border-color: var(--violet); box-shadow: inset 2px 0 0 var(--violet); }
+:root[data-skin="capri"] .insp-now.waiting { border-color: #FF9F0A; background: #1B120A; box-shadow: inset 2px 0 0 #FF9F0A; }
+:root[data-skin="capri"] .insp-worry {
+  border: 0; border-radius: 0; clip-path: var(--cut); box-shadow: inset 3px 0 0 #FF3B5C;
+  background: repeating-linear-gradient(-45deg, rgba(255, 59, 92, 0.16) 0 8px, rgba(255, 59, 92, 0.04) 8px 16px), #170C14;
+}
+:root[data-skin="capri"] .insp-worry b {
+  color: #FF3B5C; font-family: "JetBrains Mono", Consolas, monospace; font-size: 11px;
+  text-transform: uppercase; letter-spacing: 0.1em; animation: capri-blink 1.2s steps(2, jump-none) infinite;
+}
+@keyframes capri-blink { 0% { opacity: 1; } 100% { opacity: 0.45; } }
+@media (prefers-reduced-motion: reduce) { :root[data-skin="capri"] .insp-worry b { animation: none; } }

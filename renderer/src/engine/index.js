@@ -33,8 +33,10 @@ import * as sound from "./sound.js";
 import * as speech from "./speech.js";
 import * as watchdog from "./watchdog.js";
 import * as demoScript from "./demo.js";
+import * as skin from "./skin.js";
+import * as portrait from "./portrait.js";
 import { fresh } from "./pointer.js";
-import { now } from "./util.js";
+import { now, wall } from "./util.js";
 
 export const W = gfx.W, H = gfx.H;
 
@@ -47,7 +49,12 @@ const { L } = layout;
 export function init(el, host, ui) {
   gfx.attach(el);
   bridge.configure(host, ui);
-  model.setReactions({ onSpawn: minis.onSpawn, onFinish: minis.onFinish, onMood: pipMod.onMood });
+  model.setReactions({
+    onSpawn: minis.onSpawn, onFinish: minis.onFinish, onMood: pipMod.onMood,
+    // Heat and RAM are Capri's: with anyone else picked, nothing is said about them.
+    onHeat: (level) => skin.isCapri() && pipMod.onHeat(level),
+    onRam: (s) => skin.isCapri() && pipMod.onRam(s),
+  });
   clock.configure({ frame, fps: desiredFps });
   demoScript.watch((on) => bridge.ui.onDemoState(on));
   input.attach(el);
@@ -60,16 +67,45 @@ export function init(el, host, ui) {
 export function ingest({ events, replay }) {
   for (const e of events) model.apply(e, replay);
   if (replay) model.settleMood();
-  else clock.wake();
+  else {
+    clock.wake();
+    for (const e of events) if (e.ev === "Stop" && !e.aid) maybeRing(e);
+  }
   inspectChanged();
+}
+
+/**
+ * Capri's holocall. Claude finished a turn while its terminal was behind
+ * something else: a holocall, until you pick up (Answer → raises the terminal), go back to it, or
+ * a minute goes by. Never on a replay, never during the demo.
+ */
+function maybeRing(e) {
+  if (!skin.isCapri()) return; // her holocall: nobody else rings
+  const s = model.sessions.get(e.sid || "default");
+  if (!s || !s.pid || demoScript.isRunning()) return;
+  Promise.resolve(bridge.host.isAway(s.pid))
+    .then((away) => {
+      if (!away || s.state !== "finished") return;
+      layout.ring({ sid: s.sid, pid: s.pid, until: wall() + 60e3 });
+      pipMod.onCall();
+      clock.wake();
+    })
+    .catch(() => {});
 }
 
 export function setMuted(on) { sound.setMuted(on); }
 /** Pip's colour, accessory, cheeks and notch theme, from settings.json. */
-export function setLook(l) { look.set(l); clock.wake(); }
+export function setLook(l) {
+  look.set(l);
+  // Capri's skin: her faces and fonts, loaded the first time she is picked.
+  if (skin.isCapri()) { portrait.preload(); skin.loadFonts(); }
+  clock.wake();
+}
 export function sfx(name) { sound.play(name); }
 export function speak(text, dur = 2.2) { speech.say(text, dur); clock.wake(); }
 export function wake() { clock.wake(); }
+/** Pip went out on the desktop (true), or is back in the notch. */
+export function setRoaming(on) { pipMod.setOut(on); clock.wake(); }
 
 /** The main process let go of a press on the notch: a click, or a finished drag. */
 export function dragEnded(r) { input.dragEnded(r); }
@@ -206,6 +242,7 @@ function ambientReason(t) {
   if (speech.current(t)) return "bubble";
   if (pip.current()) return "emote";
   if (t < pip.whistleUntil) return "whistle";
+  if (skin.decoding(t)) return "decode";
   return "";
 }
 
@@ -215,7 +252,7 @@ function desiredFps(t) {
   const ambient = ambientReason(t);
   if (ambient) { why[ambient] = (why[ambient] || 0) + 1; return 30; }
   if (minis.busy()) return 60;
-  if (model.mood === "approval" || model.mood === "working" || model.mood === "thinking" || model.agents.size) return 24;
+  if (model.mood === "approval" || model.mood === "working" || model.mood === "thinking" || model.agents.size || layout.answer) return 24;
   if (model.mood === "sleeping") return 6;
   return 12;
 }
@@ -273,6 +310,8 @@ let drawnHeight = H;
 let worried = "";
 let lastWaiting = -1;
 
+let lastRoamMood = "";
+
 function frame(dt, t) {
   const was = model.mood;
   model.refreshMood();
@@ -280,6 +319,12 @@ function frame(dt, t) {
 
   // The watchdog caches its own scan; this only notices when the answer changes.
   // Let the tray know whether anything is waiting on the user.
+  // Capri goes out roaming while things are quiet and comes home when they aren't.
+  if (model.mood !== lastRoamMood) {
+    lastRoamMood = model.mood;
+    bridge.host.roamMood({ mood: model.mood });
+  }
+
   const waiting = model.mood === "approval" && model.lead ? model.lead.pid || 0 : 0;
   if (waiting !== lastWaiting) {
     lastWaiting = waiting;

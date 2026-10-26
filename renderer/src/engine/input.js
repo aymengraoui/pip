@@ -78,6 +78,8 @@ function onDown(e) {
   // Claude is waiting and the notch is offering the way there.
   const r = layout.review;
   if (r && x >= r.x && x <= r.x + r.w && y >= r.y && y <= r.y + r.h) { review(r.pid); return; }
+  const a = layout.answer;
+  if (a && x >= a.x && x <= a.x + a.w && y >= a.y && y <= a.y + a.h) { layout.hangUp(); review(a.pid); return; }
 
   if (isOverPip(x, y)) {
     // Stepped aside while a helper is on stage: clicking Pip means "back to
