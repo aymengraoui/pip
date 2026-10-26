@@ -15,7 +15,7 @@ import { AGENT_TOOLS, agents, heatNow, lead, mood, MOODS, sessions } from "./mod
 import { pip, isOver as isOverPip } from "./pip.js";
 import { current as currentWorry } from "./watchdog.js";
 import { focusedKey } from "./inspector.js";
-import { titleFont, subFont } from "./skin.js";
+import { isCapri, titleFont, subFont } from "./skin.js";
 import * as minis from "./minis.js";
 import { mouse } from "./pointer.js";
 
@@ -120,8 +120,8 @@ export function step(dt) {
   const tx = buildTexts();
   const tw = Math.min(220, textWidth(tx.title, titleFont(13)));
   const sw = Math.min(220, textWidth(tx.sub, subFont(11)));
-  // Wanted stars sit right after the title, so the text column makes room for them.
-  const stars = heatNow();
+  // Capri's wanted stars sit right after the title, so the text column makes room for them.
+  const stars = isCapri() ? heatNow() : 0;
   texts = { ...tx, stars, textW: Math.max(tw + (stars ? 12 + stars * 11 : 0), sw, 60) };
 
   // The call ends once you've answered it, or that session has moved on.
@@ -142,7 +142,8 @@ export function step(dt) {
   // Claude is waiting: the notch carries a way straight to the terminal, and
   // has to be wide enough to hold it.
   const asking = mood === "approval" && lead && lead.pid;
-  const calling = !asking && call;
+  // Her holocall: with anyone else picked there is no Answer button.
+  const calling = !asking && call && isCapri();
   const compactW = clamp(58 + texts.textW + 16 + minisW + (asking || calling ? 86 : 22), 230, 580);
   rows = buildRows();
 

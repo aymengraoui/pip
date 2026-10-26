@@ -34,8 +34,8 @@ contextBridge.exposeInMainWorld("pip", {
   setStartup: (on) => ipcRenderer.invoke("startup:set", on),
   focusSession: (pid) => ipcRenderer.invoke("session:focus", pid),
   isAway: (pid) => ipcRenderer.invoke("session:away", pid),
-  // Pip out on the desktop (electron/roam.js): the notch reports its mood and
-  // where Pip sits; the roaming window reports hover and clicks.
+  // Capri out on the desktop (electron/roam.js): the notch reports its mood;
+  // her roaming window reports hover and clicks.
   roamMood: (m) => ipcRenderer.send("roam-mood", m),
   roamHover: (on) => ipcRenderer.send("roam-hover", !!on),
   roamClick: () => ipcRenderer.send("roam-click"),

@@ -1,35 +1,23 @@
-// Pip out on the desktop: the page inside the small window electron/roam.js
-// moves around. Two ways of being out there:
-//
-//   creature  the same creature as the notch, in the same look, animating what
-//             the main process tells it (walking, in the air, just landed); the
-//             rest (blinking, breathing) it does on its own.
-//   peek      Capri: her full figure, small, leaning in from a screen edge, half
-//             hidden, glitching in and away, flickering while she lingers, and
-//             saying something now and then (voices.js, "peek").
+// Capri out on the desktop: the page inside the small window electron/roam.js
+// moves around (hers alone; no other creature roams). Her full figure, small,
+// leaning in from a screen edge, half hidden, glitching in and away, flickering
+// while she lingers, and saying something now and then (voices.js, "peek").
 //
 // It runs as slowly as still looks right: every frame while something moves,
 // a handful a second otherwise.
 
-import * as gfx from "../engine/gfx.js";
-import * as creature from "../engine/creature.js";
-import { BODIES, clean } from "../engine/look.js";
+import { clean } from "../engine/look.js";
 import { lines } from "../engine/voices.js";
 
-const SIZE = 96;  // keep in step with electron/roam.js
-const FEET = 88;
-const SCALE = 1.7;
-const R = 13 * SCALE;
 const GLITCH_MS = 380;
 const SHOWN = 0.55; // how much of her is on screen while she peeks
 
 const el = document.createElement("canvas");
-el.style.cssText = `width:${SIZE}px;height:${SIZE}px;display:block`;
+el.style.cssText = "display:block";
 document.body.style.cssText = "margin:0;background:transparent;overflow:hidden";
 document.body.appendChild(el);
 
-let pose = { mode: "creature", walk: false, air: false, facing: 1, land: 0, side: "right", enter: 0, leave: 0, look: clean(null) };
-let blinkAt = performance.now() + 2500;
+let pose = { side: "right", enter: 0, leave: 0, look: clean(null) };
 let hovering = false;
 
 window.pip.onRoamPose((p) => {
@@ -38,37 +26,6 @@ window.pip.onRoamPose((p) => {
 });
 // Listening now: anything said before this was lost, so ask for all of it.
 window.pip.roamReady();
-
-// -- creature -------------------------------------------------------------------
-
-function face(now) {
-  if (pose.air) return { eyes: "wide", mouth: "o", open: 1 };
-  if (now > blinkAt) {
-    if (now > blinkAt + 130) blinkAt = now + 2600 + Math.random() * 2600;
-    return { eyes: "normal", mouth: "smile", open: 0.1 };
-  }
-  return { eyes: "normal", mouth: "smile", open: 1 };
-}
-
-function drawCreature(now) {
-  const t = now / 1000;
-  const f = face(now);
-  // Landing squashes, then springs back.
-  const since = (Date.now() - (pose.land || 0)) / 1000;
-  const squash = since < 0.35 ? Math.sin((since / 0.35) * Math.PI) * 0.18 : 0;
-  const breathe = pose.walk || pose.air ? 0 : Math.sin(t * 2.2) * 0.025;
-  const hop = pose.walk ? Math.abs(Math.sin(t * 9)) * 3 : 0;
-  const l = pose.look;
-  el.style.width = el.style.height = SIZE + "px";
-  gfx.drawOn(el, SIZE, () => creature.draw(SIZE / 2, FEET - R - hop, SCALE, {
-    pal: BODIES[l.body], t, kind: l.kind, accessory: l.accessory,
-    sx: pose.facing * (1 + squash), sy: 1 - squash + breathe,
-    rot: pose.walk ? Math.sin(t * 9) * 0.06 : 0,
-    look: { x: pose.facing * 0.5, y: pose.air ? -0.3 : 0.15 }, open: f.open,
-    eyes: f.eyes, mouth: f.mouth, blush: l.cheeks ? 0.6 : 0,
-    prop: pose.walk, leafSpin: t * 8, leafAngle: Math.sin(t * 1.3) * 0.12, walk: pose.walk,
-  }));
-}
 
 // -- Capri, peeking -----------------------------------------------------------------
 // Her cut-out from capri-desktop, brightened the way that app's shader does, and
@@ -288,18 +245,11 @@ function drawPeek(now) {
 let timer = 0;
 function loop() {
   const now = performance.now();
-  let fast;
-  if (pose.mode === "peek") {
-    drawPeek(now);
-    const transit = Date.now() - (pose.enter || 0) < GLITCH_MS || (pose.leave && Date.now() - pose.leave < GLITCH_MS + 100);
-    const decoding = bubble && now / 1000 - bubble.t0 < DECODE_S + 0.2;
-    fast = transit || now < glitchUntil || decoding;
-    timer = fast ? requestAnimationFrame(loop) : setTimeout(loop, 66);
-  } else {
-    drawCreature(now);
-    fast = pose.walk || pose.air || Date.now() - (pose.land || 0) < 400;
-    timer = fast ? requestAnimationFrame(loop) : setTimeout(loop, 100);
-  }
+  drawPeek(now);
+  const transit = Date.now() - (pose.enter || 0) < GLITCH_MS || (pose.leave && Date.now() - pose.leave < GLITCH_MS + 100);
+  const decoding = bubble && now / 1000 - bubble.t0 < DECODE_S + 0.2;
+  const fast = transit || now < glitchUntil || decoding;
+  timer = fast ? requestAnimationFrame(loop) : setTimeout(loop, 66);
 }
 function kick() {
   cancelAnimationFrame(timer);
@@ -310,14 +260,12 @@ figure.onload = kick;
 loop();
 
 // -- clicks -------------------------------------------------------------------------
-// Only Pip itself takes clicks: tell the main process when the cursor is on it.
-// Peeking, that is wherever her figure is (drawn again, plain, onto a hidden
-// canvas and read back), never her speech bubble.
+// Only she takes clicks: tell the main process when the cursor is on her figure
+// (drawn again, plain, onto a hidden canvas and read back), never on her bubble.
 
 const hit = document.createElement("canvas");
 
 function over(e) {
-  if (pose.mode !== "peek") return Math.hypot(e.clientX - SIZE / 2, e.clientY - (FEET - R)) < R * 1.25;
   const g = figure.naturalWidth && geometry(performance.now());
   if (!g) return false;
   hit.width = g.W;

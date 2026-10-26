@@ -48,8 +48,22 @@ const timers = {};
 const tail = hooks.createTail();
 const context = require("./context");
 
-/** Each event that names a transcript carries how full that context is (`ctx`), for the RAM gauge. */
+/**
+ * Capri picked in Appearance? Everything she brought (the RAM gauge, the
+ * holocall, roaming) is hers alone: with any other creature Pip does none of it,
+ * not even the work behind it. "construct" was her name before.
+ */
+function capriPicked() {
+  const kind = store.settings.get().look?.kind;
+  return kind === "capri" || kind === "construct";
+}
+
+/** Roaming the desktop: on in Settings, and Capri picked. */
+const roamOn = () => !!store.settings.get().roam && capriPicked();
+
+/** Each event that names a transcript carries how full that context is (`ctx`), for her RAM gauge. */
 function withContext(events) {
+  if (!capriPicked()) return events;
   for (const e of events) {
     if (!e || !e.tp) continue;
     const c = context.of(e.tp);
@@ -64,17 +78,15 @@ function withContext(events) {
  * (no pid, no window, Pip itself in front) counts as no, so it never rings for nothing.
  */
 function sessionAway(pid) {
-  if (!pid) return false;
+  if (!pid || !capriPicked()) return false;
   const fg = windows.activeWindow(app.getAppMetrics().map((m) => m.pid));
   const term = windows.windowFor(pid);
   return !!(fg && term && fg.pid !== term.pid);
 }
 const send = (channel, payload) => { if (notch && !notch.isDestroyed()) notch.webContents.send(channel, payload); };
 
-// Pip out on the desktop (electron/roam.js), and where it sits in the notch, as
-// the renderer last said: the spot it hops out of and back into.
+// Capri out on the desktop (electron/roam.js), hers alone.
 let roamer = null;
-let roamHome = { x: W / 2, y: 26, r: 13 };
 
 function load(win) {
   if (DEV) return win.loadURL("http://localhost:5173/index.html");
@@ -445,7 +457,6 @@ ipcMain.on("menu", () => {
 ipcMain.on("quit", () => app.quit());
 ipcMain.on("roam-mood", (_e, m) => {
   if (!m || typeof m !== "object") return;
-  roamHome = { x: Number(m.x) || roamHome.x, y: Number(m.y) || roamHome.y, r: Number(m.r) || roamHome.r };
   roamer?.setMood(String(m.mood || ""));
 });
 ipcMain.on("roam-hover", (_e, on) => roamer?.hover(!!on));
@@ -457,8 +468,8 @@ ipcMain.handle("settings:set", (_e, patch) => {
   store.settings.set(patch);
   // Pinning (or unpinning) moves the notch now, not on the next tick.
   if (patch && "screen" in patch && notch && !notch.isDestroyed()) { homeId = targetDisplay().id; placeNotch(); }
-  if (patch && "roam" in patch) roamer?.setEnabled(!!patch.roam);
-  if (patch && "look" in patch) roamer?.setLook(store.settings.get().look);
+  // Roaming is Capri's: turning it off, or picking anyone else, brings her home.
+  if (patch && ("roam" in patch || "look" in patch)) roamer?.setEnabled(roamOn());
   const s = publicState();
   send("state", s);
   return s;
@@ -499,17 +510,11 @@ app.whenReady().then(() => {
     load: (win, hash) => (DEV
       ? win.loadURL(`http://localhost:5173/index.html#${hash}`)
       : win.loadFile(path.join(__dirname, "..", "dist", "index.html"), { hash })),
-    windows,
-    ownPids: () => app.getAppMetrics().map((m) => m.pid),
-    home: () => {
-      const b = notch && !notch.isDestroyed() ? notch.getBounds() : homeArea();
-      return { x: b.x + roamHome.x, y: b.y + roamHome.y + roamHome.r };
-    },
     area: homeArea,
     look: () => store.settings.get().look,
     onOut: (on) => send("roam", on),
   });
-  roamer.setEnabled(store.settings.get().roam);
+  roamer.setEnabled(roamOn());
   if (suspended()) roamer.suspend();
   createTray();
   // A layout change can move the work area out from under us, or take the

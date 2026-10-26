@@ -250,7 +250,16 @@ becomes one spoken line. One line, once — no badge, no list to dismiss.
 
 Picking **Capri** in Appearance does more than change the creature: the whole
 notch takes her look, and picking any other creature takes it off. There is no
-separate switch; `skin.isCapri()` is just `look.get().kind === "capri"`.
+separate switch; `skin.isCapri()` is just `look.get().kind === "capri"` (and
+`capriPicked()` in `main.js` for the main process).
+
+**Everything she brought is hers alone.** With any other creature picked Pip
+behaves exactly as it did before she arrived: no RAM gauge, no stars, no
+holocall, no roaming (its switch isn't even shown), her Crimson coat and Night
+City theme aren't offered (`look.offered`) and a saved look drops them
+(`look.clean`), and the main process doesn't read transcripts or ask where your
+windows are. Keep it that way: anything new for her checks `isCapri()` (or
+`capriPicked()`), and the smoke test checks the sprout sees none of it.
 
 - **Her face, not a drawing.** In the notch she is one of her portraits from the
   show (`renderer/src/assets/capri/`, drawn by `engine/portrait.js` in a cut-corner
@@ -274,70 +283,60 @@ separate switch; `skin.isCapri()` is just `look.get().kind === "capri"`.
 - A look saved as `construct` (her name before) is read as `capri` (`RENAMED` in
   `look.js`).
 
-## RAM, heat and the holocall
+## Her HUD: RAM, heat and the holocall
 
-Three things on the pill, each one line of state in the model and a few strokes
-in `render.js`:
+Three things on the pill, Capri's only, each one line of state in the model and
+a few strokes in `render.js`:
 
-- **RAM.** `hook.js` records `tp`, the session's transcript path. The main
-  process reads the token counts of the last answer from its tail
-  (`electron/context.js`, cached a few seconds per file) and puts `ctx: {used, max}`
-  on the events it sends (`withContext`). `model.noteRam` keeps it as `s.ram`, and
-  the pill's bottom accent line becomes ten cells, lit as far as the lead
-  session's context is full: the mood's colour, amber past 60 %, red past 80 %.
-  Past 80 % Pip says so once (`reactions.onRam`), and again only after it has
-  dropped under 50 % (a compaction). The 1M window isn't written in the
+- **RAM.** `hook.js` records `tp`, the session's transcript path. While Capri is
+  picked the main process reads the token counts of the last answer from its tail
+  (`electron/context.js`, cached a few seconds per file) and puts
+  `ctx: {used, max}` on the events it sends (`withContext`). `model.noteRam` keeps
+  it as `s.ram`, and the pill's bottom accent line becomes ten cells, lit as far
+  as the lead session's context is full: the mood's colour, amber past 60 %, red
+  past 80 %. Past 80 % she says so once (`reactions.onRam`), and again only after
+  it has dropped under 50 % (a compaction). The 1M window isn't written in the
   transcript, so past 200k used it is assumed.
 - **Heat.** Failed tool calls one after the other are wanted stars, up to five,
   drawn right after the title. Three clean calls take one off and a star fades
-  every 90 s. They are aged by the events' own `t` (`heatNow`), so a replay can't
-  bring old stars back, and `reactions.onHeat` only fires live.
-- **The holocall.** A live `Stop` asks the main process whether that session's
-  terminal is behind something else (`host.isAway` → `sessionAway`: the window
-  in front versus `windows.windowFor(pid)`, by pid). If it is, the pill glows
-  blue and carries "Answer →" (`layout.answer`), which raises the terminal like
-  Review does. It hangs up when that session moves on, or after a minute.
-  Unknown counts as not away, so it never rings for nothing; never on a replay,
-  never in the demo.
+  every 90 s. The model counts them for everyone (`heatNow`, aged by the events'
+  own `t`, so a replay can't bring old stars back); only Capri shows them and
+  talks about them.
+- **The holocall.** With Capri picked, a live `Stop` asks the main process
+  whether that session's terminal is behind something else (`host.isAway` →
+  `sessionAway`: the window in front versus `windows.windowFor(pid)`, by pid). If
+  it is, the pill glows blue and carries "Answer →" (`layout.answer`), which
+  raises the terminal like Review does. It hangs up when that session moves on,
+  or after a minute. Unknown counts as not away, so it never rings for nothing;
+  never on a replay, never in the demo.
 
-## Out on the desktop
+## Capri out on the desktop
 
-With `settings.roam` on (off by default, Settings → Pip), Pip leaves the notch
-while Claude is quiet: idle or napping for 8 s. It hops into a window of its own
-(`electron/roam.js`, 96 px square) and perches on the top edge of the window you
-are working in, following it when it moves and strolling along it now and then;
-a maximized window has no edge below the notch, so then it walks along the
-bottom of the screen. Any other mood brings it home at once, and so does a click
-(it then stays home for two minutes).
+With Capri picked and `settings.roam` on (off by default; the switch in Settings →
+General only shows while she is picked), she leaves the notch while Claude is
+quiet: idle or napping for 8 s. No other creature roams.
 
-- **The notch keeps the status.** `pip.setOut` shrinks Pip away on its own intro
-  spring and turns its hit test off; the pill, the rows and the sproutlings stay.
-  The notch reports its mood and where Pip sits (`roam-mood`) whenever the mood
-  changes: that spot is where it hops out and back in.
-- **The main process moves the window**; the page (`renderer/src/roam/roam.js`,
-  the `#roam` hash of the same build) only draws: the same creature in the same
-  look, walking, in the air, landing, blinking. Timers run fast only while it
-  travels; perched, it is one poll a second and ten frames a second.
-- **Only Pip takes clicks.** The window ignores the mouse except while the page
-  reports the cursor over Pip (`roam-hover`), so it never eats a click on the
-  title bar it sits on.
-- **It stops while suspended**, like everything else: game mode or Pause land it
-  home and hide the window.
-- **Capri peeks instead of perching.** With her skin on, the window is 230×200 at
-  the left or right edge of the screen, clear of the notch and the taskbar, and the
-  page draws her cut-out (`assets/capri/capri-full.png`) small (150 px) and half
-  hidden, leaning in, glitching in and away (sliced, with red, green and violet
-  ghosts) and flickering now and then. The rest of the window is room for what
-  she says: a line from her `peek` voice a beat after she glitches in (most of
-  the time), then every 9–18 s, in her plate with a tail to her head. Only her
-  figure takes clicks and makes her shy (a strip 70 px wide along the edge), never
-  the bubble: the pointer lingering near her for 0.6 s sends her elsewhere, and she
-  moves on by herself every 18–40 s. Changing the look while she is out brings her
-  back and sends her out the new way.
+- **She peeks.** Her window (`electron/roam.js`, 230×200) sits at the left or right
+  edge of the screen, clear of the notch and the taskbar. The page
+  (`renderer/src/roam/roam.js`, the `#roam` hash of the same build) draws her
+  cut-out (`assets/capri/capri-full.png`) small (150 px) and half hidden, leaning
+  in, glitching in and away (sliced, with red, green and violet ghosts) and
+  flickering now and then. The rest of the window is room for what she says: a
+  line from her `peek` voice a beat after she glitches in (most of the time), then
+  every 9–18 s, in her plate with a tail to her head.
+- **Shy, and never in the way.** Only her figure takes clicks and makes her shy (a
+  strip 70 px wide along the edge), never the bubble: the window ignores the mouse
+  except while the page reports the cursor over her (`roam-hover`). The pointer
+  lingering near her for 0.6 s sends her elsewhere, and she moves on by herself
+  every 18–40 s. A click brings her home for two minutes.
+- **Home at once** when Claude gets busy, when roaming is turned off, when any
+  other creature is picked (`setEnabled(roamOn())`), and while suspended (game
+  mode, Pause). The notch keeps the status meanwhile: `pip.setOut` shrinks her out
+  of it on her own intro spring and turns her hit test off.
 - **The page asks for its state** (`roam-ready`). It loads its code a moment after
-  the window reports it has loaded, so whatever was sent before then was lost:
-  the look, and on the first trip out everything else. The main process keeps
-  all of it merged and answers with it. `PIP_DEBUG=1` logs the roamer's decisions.
+  the window reports it has loaded, so whatever was sent before then would be lost;
+  the main process keeps all of it merged and answers with it. `PIP_DEBUG=1` logs
+  the roamer's decisions.
 
 ## Which screen Pip lives on
 
@@ -432,7 +431,7 @@ add `--focus` to actually raise it.
 | Go to terminal (in the panel) | raise the terminal that session runs in | `windows.focusProcess` |
 | Review → (on the notch, while waiting) | the same, one click from anywhere | `layout.review` + `input.js` |
 | Answer → (on the notch, while a holocall rings) | the same, for the session that just finished | `layout.answer` + `input.js` |
-| Pip, out roaming the desktop | come home, and stay home for two minutes | `roam.js` `click` |
+| Capri, out roaming the desktop | come home, and stay home for two minutes | `roam.js` `click` |
 | gear, tray, 2nd instance | Settings | `send("panel", …)` |
 | tray → Activity | inspector on the busiest session | `engine.inspectLead` |
 

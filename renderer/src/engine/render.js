@@ -62,7 +62,7 @@ export function drawPill(t) {
 
   // A soft accent line along the bottom edge: the mood, at a glance.
   const lw = Math.max(0, w - r * 2 - 10);
-  const ram = lead && lead.ram != null ? clamp(lead.ram, 0, 1) : null;
+  const ram = skin.isCapri() && lead && lead.ram != null ? clamp(lead.ram, 0, 1) : null;
   if (ram == null) {
     const grad = ctx.createLinearGradient(x + r, 0, x + r + lw, 0);
     grad.addColorStop(0, "rgba(0,0,0,0)");
@@ -72,8 +72,8 @@ export function drawPill(t) {
     ctx.fillStyle = grad;
     ctx.fillRect(x + r + 5, h - 1.5, lw, 1.5);
   } else {
-    // When Claude's context is known, the line is a RAM gauge: ten cells, lit as
-    // far as it's full, in the mood's colour until it's getting crowded.
+    // Capri's RAM gauge, when Claude's context is known: ten cells, lit as far as
+    // it's full, in the mood's colour until it's getting crowded.
     const cells = 10, gap = 3, cw = (lw - gap * (cells - 1)) / cells;
     const lit = Math.max(1, Math.round(ram * cells));
     const fill = ram >= 0.8 ? MOODS.error.accent : ram >= 0.6 ? MOODS.approval.accent : accent;

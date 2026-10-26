@@ -49,7 +49,12 @@ const { L } = layout;
 export function init(el, host, ui) {
   gfx.attach(el);
   bridge.configure(host, ui);
-  model.setReactions({ onSpawn: minis.onSpawn, onFinish: minis.onFinish, onMood: pipMod.onMood, onHeat: pipMod.onHeat, onRam: pipMod.onRam });
+  model.setReactions({
+    onSpawn: minis.onSpawn, onFinish: minis.onFinish, onMood: pipMod.onMood,
+    // Heat and RAM are Capri's: with anyone else picked, nothing is said about them.
+    onHeat: (level) => skin.isCapri() && pipMod.onHeat(level),
+    onRam: (s) => skin.isCapri() && pipMod.onRam(s),
+  });
   clock.configure({ frame, fps: desiredFps });
   demoScript.watch((on) => bridge.ui.onDemoState(on));
   input.attach(el);
@@ -70,11 +75,12 @@ export function ingest({ events, replay }) {
 }
 
 /**
- * Claude finished a turn while its terminal was behind something else: a
- * holocall, until you pick up (Answer → raises the terminal), go back to it, or
+ * Capri's holocall. Claude finished a turn while its terminal was behind
+ * something else: a holocall, until you pick up (Answer → raises the terminal), go back to it, or
  * a minute goes by. Never on a replay, never during the demo.
  */
 function maybeRing(e) {
+  if (!skin.isCapri()) return; // her holocall: nobody else rings
   const s = model.sessions.get(e.sid || "default");
   if (!s || !s.pid || demoScript.isRunning()) return;
   Promise.resolve(bridge.host.isAway(s.pid))
@@ -313,10 +319,10 @@ function frame(dt, t) {
 
   // The watchdog caches its own scan; this only notices when the answer changes.
   // Let the tray know whether anything is waiting on the user.
-  // The roaming window goes out while things are quiet and comes home when they aren't.
+  // Capri goes out roaming while things are quiet and comes home when they aren't.
   if (model.mood !== lastRoamMood) {
     lastRoamMood = model.mood;
-    bridge.host.roamMood({ mood: model.mood, x: pip.x, y: pip.y, r: pip.radius() });
+    bridge.host.roamMood({ mood: model.mood });
   }
 
   const waiting = model.mood === "approval" && model.lead ? model.lead.pid || 0 : 0;

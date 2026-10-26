@@ -260,6 +260,7 @@ canvas.preview { position: static; }
 :root[data-skin="capri"] .toggle.on { background: #FF3B5C; }
 :root[data-skin="capri"] .tile { border-radius: 0; clip-path: var(--cut); }
 :root[data-skin="capri"] .tile.on { border-color: var(--violet); box-shadow: inset 0 -2px 0 #FF3B5C; }
+:root[data-skin="capri"] .themes { grid-template-columns: repeat(6, 1fr); } /* her Night City is the sixth */
 :root[data-skin="capri"] .theme { border-radius: 0; clip-path: polygon(0 0, 100% 0, 100% calc(100% - 7px), calc(100% - 7px) 100%, 7px 100%, 0 calc(100% - 7px)); }
 :root[data-skin="capri"] .input,
 :root[data-skin="capri"] .select { border-radius: 0; }

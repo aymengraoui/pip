@@ -17,7 +17,8 @@ export const BODIES = {
   caramel:  { name: "Caramel",  light: "#FFF3E4", mid: "#E9C190", edge: "#C99358", feet: "#A57340", leaf: "#3DBB74", leafDark: "#2A8A56" },
   steel:    { name: "Steel",    light: "#F3F7FB", mid: "#C8D5E2", edge: "#91A3B7", feet: "#71849A", leaf: "#3DBB74", leafDark: "#2A8A56" },
   sakura:   { name: "Sakura",   light: "#FFF6F8", mid: "#FFD6E0", edge: "#F0A6BA", feet: "#D9889E", leaf: "#FF8FB1", leafDark: "#D9628F" },
-  crimson:  { name: "Crimson",  light: "#FFE1E8", mid: "#FF4D79", edge: "#C81E4E", feet: "#6E1438", leaf: "#3BE38A", leafDark: "#1FA85E" },
+  // Capri's coat: only offered, and only kept, while she is picked (`capri`).
+  crimson:  { name: "Crimson",  light: "#FFE1E8", mid: "#FF4D79", edge: "#C81E4E", feet: "#6E1438", leaf: "#3BE38A", leafDark: "#1FA85E", capri: true },
 };
 
 /**
@@ -56,7 +57,8 @@ export const THEMES = {
   forest:   { name: "Forest",   bg: "#0A140F", surface: "#122019", raise: "#17271F", hover: "#1F3229", line: "#253A2F", sub: "#97B3A5" },
   ocean:    { name: "Ocean",    bg: "#0A111E", surface: "#111B2C", raise: "#162235", hover: "#1E2C44", line: "#26344D", sub: "#97A7C3" },
   cocoa:    { name: "Cocoa",    bg: "#170F0B", surface: "#231914", raise: "#2B1F19", hover: "#372820", line: "#3E2E25", sub: "#BCA595" },
-  nightcity:{ name: "Night City", bg: "#0D0913", surface: "#181120", raise: "#1E1528", hover: "#281C35", line: "#342542", sub: "#B9A0CC" },
+  // Capri's theme: only offered, and only kept, while she is picked (`capri`).
+  nightcity:{ name: "Night City", bg: "#0D0913", surface: "#181120", raise: "#1E1528", hover: "#281C35", line: "#342542", sub: "#B9A0CC", capri: true },
 };
 
 // Keep in step with DEFAULTS.look in electron/store.js: the main process can't
@@ -77,14 +79,20 @@ const known = (list, name, fallback) => (typeof name === "string" && Object.hasO
  */
 export function clean(look) {
   const l = { ...DEFAULT_LOOK, ...(look || {}) };
-  return {
-    kind: known(KINDS, RENAMED[l.kind] || l.kind, DEFAULT_LOOK.kind),
-    body: known(BODIES, l.body, DEFAULT_LOOK.body),
-    accessory: known(ACCESSORIES, l.accessory, DEFAULT_LOOK.accessory),
-    cheeks: !!l.cheeks,
-    theme: known(THEMES, l.theme, DEFAULT_LOOK.theme),
-  };
+  const kind = known(KINDS, RENAMED[l.kind] || l.kind, DEFAULT_LOOK.kind);
+  let body = known(BODIES, l.body, DEFAULT_LOOK.body);
+  let theme = known(THEMES, l.theme, DEFAULT_LOOK.theme);
+  // Capri's coat and theme go with her: picking anyone else puts that creature's
+  // own coat and the default notch back, as if she had never been here.
+  if (kind !== "capri") {
+    if (BODIES[body].capri) body = KINDS[kind].body;
+    if (THEMES[theme].capri) theme = DEFAULT_LOOK.theme;
+  }
+  return { kind, body, accessory: known(ACCESSORIES, l.accessory, DEFAULT_LOOK.accessory), cheeks: !!l.cheeks, theme };
 }
+
+/** What Settings offers for this look: Capri's own coat and theme only while she is picked. */
+export const offered = (list, kind) => Object.entries(list).filter(([, v]) => !v.capri || kind === "capri");
 
 export function set(look) { current = clean(look); }
 

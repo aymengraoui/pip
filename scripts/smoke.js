@@ -12,13 +12,13 @@
 import * as engine from "../renderer/src/engine/index.js";
 import { agents, sessions, history, heatNow } from "../renderer/src/engine/model.js";
 import { viewOf } from "../renderer/src/engine/minis.js";
-import { L, review, isPinned, call } from "../renderer/src/engine/layout.js";
+import { L, review, isPinned, call, texts } from "../renderer/src/engine/layout.js";
 import * as watchdog from "../renderer/src/engine/watchdog.js";
 import { pip } from "../renderer/src/engine/pip.js";
 import * as gfx from "../renderer/src/engine/gfx.js";
 import { host } from "../renderer/src/engine/bridge.js";
 import { isCapri } from "../renderer/src/engine/skin.js";
-import { ACCESSORIES, BODIES, KINDS, THEMES, get as getLook } from "../renderer/src/engine/look.js";
+import { ACCESSORIES, BODIES, KINDS, THEMES, get as getLook, clean as cleanLook } from "../renderer/src/engine/look.js";
 
 // -- virtual clock, so 10 minutes of Pip take 20 ms ---------------------------
 
@@ -543,9 +543,20 @@ advance(200);
 const ram = sessions.get(sidh)?.ram;
 check("a session knows how full its context is", Math.abs(ram - 0.85) < 1e-9, String(ram));
 
+// The HUD is Capri's: with the sprout there are no stars and no holocall.
 const awayBefore = host.isAway;
 host.isAway = () => true;
+feedh([failed, failed, failed]);
+advance(300);
+check("with another creature, no wanted stars on the notch", !texts.stars, String(texts.stars));
 feedh([{ ev: "Stop" }]);
+await null; await null;
+advance(300);
+check("and no holocall", !call, JSON.stringify(call));
+engine.setLook({ kind: "capri" });
+advance(300);
+check("with Capri, her stars are there", texts.stars === 3, String(texts.stars));
+feedh([{ ev: "UserPromptSubmit", msg: "again" }, { ev: "Stop" }]);
 await null; await null; // isAway answers asynchronously
 advance(300);
 check("finishing while you're elsewhere rings", !!call && call.sid === sidh, JSON.stringify(call));
@@ -558,6 +569,8 @@ await null; await null;
 advance(300);
 check("finishing while you're looking at it doesn't", !call, JSON.stringify(call));
 host.isAway = awayBefore;
+engine.setLook({ kind: "sprout" });
+advance(300);
 
 // -- Capri's skin ---------------------------------------------------------------
 
@@ -567,6 +580,8 @@ check("picking Capri puts her skin on the notch", isCapri());
 engine.setLook({ kind: "sprout" });
 advance(300);
 check("any other creature takes it off again", !isCapri());
+const after = cleanLook({ kind: "kitty", body: "crimson", theme: "nightcity" });
+check("her coat and theme go with her", after.body === KINDS.kitty.body && after.theme === "midnight", JSON.stringify(after));
 
 console.log(failures ? `\n${failures} check(s) failed` : "\nall checks passed");
 process.exit(failures ? 1 : 0);

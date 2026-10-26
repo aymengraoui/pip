@@ -129,10 +129,10 @@ skin on the whole notch. you're welcome.
 
 ![The holocall: "Done!", three stars, and an Answer button, in Capri's plate](docs/capri/holocall.png)
 
-**presents, for every creature (even the sprout)**
+**our extras (they only exist while we're picked)**
 
 - **RAM.** the line along the bottom of the notch is a ten-cell gauge of how full Claude's
-  context is. amber past 60%, red past 80%, and someone (us) will mention it.
+  context is. amber past 60%, red past 80%, and we'll mention it.
 - **NCPD heat.** failed tool calls in a row earn wanted stars beside the title. five stars and
   MaxTac's on the way. clean calls and a bit of quiet cool it down.
 - **holocalls.** Claude finishes while you're off in another window? the notch rings, blue.
@@ -140,8 +140,8 @@ skin on the whole notch. you're welcome.
 
 **out on your screen**
 
-turn on **Roam the desktop when idle** and, while Claude has nothing going on, we leave the
-notch. other creatures go sit on top of your windows. we don't sit. we *peek*: half hidden at
+turn on **Roam the desktop when idle** (it only shows up once you've picked us) and, while
+Claude has nothing going on, we leave the notch. we don't sit on your windows. we *peek*: half hidden at
 the edge of your screen, small, out of your way, glitching in, saying whatever crosses our
 minds. get your pointer close and we're gone, somewhere else along the edge. the moment Claude
 gets busy, we're back in the notch where we belong.
@@ -154,8 +154,9 @@ gets busy, we're back in the notch where we belong.
 2. **Appearance** → pick **Capri**. try the **Night City** notch theme while you're there.
 3. **General** → **Roam the desktop when idle**, if you want us out on the screen.
 
-and if you ever want the sprout back: pick any other creature and we step aside. we'll be
-right here in the list. watching.
+and if you ever want the sprout back: pick any other creature and we step aside, all of us.
+no gauge, no stars, no calls, no roaming, not even our colours in the picker. Pip, exactly as
+it was. we'll be right here in the list. watching.
 
 ![Settings in Capri's skin: violet tabs, red toggles, cut-corner cards](docs/capri/settings.png)
 

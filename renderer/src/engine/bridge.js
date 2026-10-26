@@ -11,7 +11,7 @@ export const host = {
   menu: noop,         // right click: native context menu
   focusSession: noop, // raise the terminal a session is running in
   isAway: () => false, // is that terminal behind something else right now? (the holocall)
-  roamMood: noop,     // the mood and where Pip sits, for its trips out on the desktop
+  roamMood: noop,     // the mood, for Capri's trips out on the desktop
   setWaiting: noop,   // which process is waiting on the user, or 0
   startDrag: noop,    // a press on the notch: true if the host will follow it as a drag
   stopDrag: noop,     // the window heard the button come up
