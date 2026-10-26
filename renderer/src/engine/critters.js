@@ -1,5 +1,5 @@
 // The creatures Pip can be besides a sprout: a kitty, a bunny, a puppy, a
-// robot and a construct, each its own whole animal. creature.js draws the face on top, at the
+// robot and Capri, each its own whole animal. creature.js draws the face on top, at the
 // same spot for all of them, so every expression works on every creature.
 //
 // Each one is drawn in two passes around that face:
@@ -19,16 +19,16 @@ const INK = "#1E2230";
 const PINK = "#FFB3C7";
 const NOSE = "#FF8FAE";
 
-/** How a creature's face is drawn: robots and constructs get glowing marks. */
+/** How a creature's face is drawn: robots and Capri get glowing marks. */
 export function faceStyle(kind) {
   if (kind === "robot") return { ink: "#7FF5E6", led: true };
-  if (kind === "construct") return { ink: "#9BE7FF", led: true };
+  if (kind === "capri") return { ink: "#9BE7FF", led: true };
   return { ink: INK, led: false };
 }
 
 /** The default "smile" each animal makes; other mouths are shared. */
 export function smileFor(kind) {
-  if (kind === "construct") return "zigzag";
+  if (kind === "capri") return "zigzag";
   return kind === "kitty" ? "cat" : kind === "bunny" ? "bunny" : kind === "puppy" ? "pup" : "smile";
 }
 
@@ -38,7 +38,7 @@ export function back(kind, o, R, s) {
     case "bunny": return bunny(o, R, s);
     case "puppy": return puppy(o, R, s);
     case "robot": return robot(o, R, s);
-    case "construct": return construct(o, R, s);
+    case "capri": return capri(o, R, s);
   }
 }
 
@@ -372,8 +372,8 @@ function robot(o, R, s) {
   ctx.stroke();
 }
 
-// -- construct ------------------------------------------------------------------
-// A personality construct from Night City: a mane of jagged shards, a dark suit,
+// -- capri ----------------------------------------------------------------------
+// Capri, the Project Capricorn construct from Night City: a mane of jagged shards, a dark suit,
 // and a green mask her eyes glow through. The mane is the coat's colour, so her
 // helpers come in theirs; the mask and the eyes are always hers.
 
@@ -383,7 +383,7 @@ const SOCKET = "#0F1C16";
 const SUIT = "#1B1426";
 const GLITCH = "rgba(122,60,255,0.55)";
 
-function construct(o, R, s) {
+function capri(o, R, s) {
   // While she works, a violet copy of her mane lags a step behind: a glitch.
   if (o.prop) mane(o, R, GLITCH, R * 0.16 * Math.sign(Math.sin(o.leafSpin * 0.7) || 1));
   mane(o, R, o.pal.mid, 0);

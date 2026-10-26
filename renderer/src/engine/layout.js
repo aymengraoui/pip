@@ -15,6 +15,7 @@ import { AGENT_TOOLS, agents, heatNow, lead, mood, MOODS, sessions } from "./mod
 import { pip, isOver as isOverPip } from "./pip.js";
 import { current as currentWorry } from "./watchdog.js";
 import { focusedKey } from "./inspector.js";
+import { titleFont, subFont } from "./skin.js";
 import * as minis from "./minis.js";
 import { mouse } from "./pointer.js";
 
@@ -117,8 +118,8 @@ function buildRows() {
 
 export function step(dt) {
   const tx = buildTexts();
-  const tw = Math.min(220, textWidth(tx.title, `600 13px ${FONT}`));
-  const sw = Math.min(220, textWidth(tx.sub, `11px ${FONT}`));
+  const tw = Math.min(220, textWidth(tx.title, titleFont(13)));
+  const sw = Math.min(220, textWidth(tx.sub, subFont(11)));
   // Wanted stars sit right after the title, so the text column makes room for them.
   const stars = heatNow();
   texts = { ...tx, stars, textW: Math.max(tw + (stars ? 12 + stars * 11 : 0), sw, 60) };

@@ -30,8 +30,9 @@ export const KINDS = {
   bunny: { name: "Bunny", body: "snow" },
   puppy: { name: "Puppy", body: "caramel" },
   robot: { name: "Robot", body: "steel" },
-  // a personality construct from Night City: spiky mane, green mask, glowing eyes
-  construct: { name: "Construct", body: "crimson" },
+  // Capri, the Project Capricorn construct: spiky mane, green mask, glowing eyes.
+  // Picking her also gives the notch her skin (skin() below).
+  capri: { name: "Capri", body: "crimson" },
 };
 
 /** Something to wear. Drawn by creature.js, on Pip only. */
@@ -64,6 +65,9 @@ export const DEFAULT_LOOK = { kind: "sprout", body: "mint", accessory: "none", c
 
 let current = DEFAULT_LOOK;
 
+// Kinds that were renamed: a look saved under the old name keeps its creature.
+const RENAMED = { construct: "capri" };
+
 // Own keys only: `in` would let "constructor" or "toString" through.
 const known = (list, name, fallback) => (typeof name === "string" && Object.hasOwn(list, name) ? name : fallback);
 
@@ -74,7 +78,7 @@ const known = (list, name, fallback) => (typeof name === "string" && Object.hasO
 export function clean(look) {
   const l = { ...DEFAULT_LOOK, ...(look || {}) };
   return {
-    kind: known(KINDS, l.kind, DEFAULT_LOOK.kind),
+    kind: known(KINDS, RENAMED[l.kind] || l.kind, DEFAULT_LOOK.kind),
     body: known(BODIES, l.body, DEFAULT_LOOK.body),
     accessory: known(ACCESSORIES, l.accessory, DEFAULT_LOOK.accessory),
     cheeks: !!l.cheeks,

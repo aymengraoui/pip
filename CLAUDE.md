@@ -246,6 +246,34 @@ polled every 15 s from the main process and off entirely in game mode. Past thre
 minutes you are away, and `model.totals` is snapshotted; on return the difference
 becomes one spoken line. One line, once — no badge, no list to dismiss.
 
+## Capri's skin
+
+Picking **Capri** in Appearance does more than change the creature: the whole
+notch takes her look, and picking any other creature takes it off. There is no
+separate switch; `skin.isCapri()` is just `look.get().kind === "capri"`.
+
+- **Her face, not a drawing.** In the notch she is one of her portraits from the
+  show (`renderer/src/assets/capri/`, drawn by `engine/portrait.js` in a cut-corner
+  frame with a violet copy behind it), picked per mood and emote (`capriFace` in
+  `pip.js`). Until an image has loaded, or with no `Image` at all (the smoke
+  test), she is drawn like any other kind, by `critters.js`; helpers, the roaming
+  window and the Settings tiles always use the drawn one. **The art is not
+  covered by the MIT license** (see the README in that folder).
+- **Her plates.** The pill is a hard-edged plate with cut corners, a bite out of
+  the bottom edge and her violet misregistered copy; buttons and the speech
+  bubble follow (`render.js`, `skin.plate`). Her fonts are Chakra Petch for words
+  and JetBrains Mono for the line under the title and the rows (`skin.titleFont`,
+  `subFont`, `bodyFont`; `layout.js` measures with the same ones). The title
+  decodes in behind a tail of noise when it changes (`skin.decoded`, 30 fps while
+  it does).
+- **Her chaos.** Her own lines for every moment, plus two only she has: chatter
+  when idle and lines when poked (`voices.js`). She glitches (sliced face, red and
+  green split) every 6–16 s while awake, on a poke, and for a second on an error.
+- **The panels** take her skin from CSS: `App.jsx` sets `data-skin="capri"` on the
+  root and `notch.css` restyles cards, tabs, toggles and buttons under it.
+- A look saved as `construct` (her name before) is read as `capri` (`RENAMED` in
+  `look.js`).
+
 ## RAM, heat and the holocall
 
 Three things on the pill, each one line of state in the model and a few strokes

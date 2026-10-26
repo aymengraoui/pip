@@ -28,6 +28,8 @@ function applyLook(look) {
   for (const k of ["surface", "raise", "hover", "line"]) root.setProperty(`--${k}`, th[k]);
   root.setProperty("--muted", th.sub);
   root.setProperty("--bg", th.bg);
+  // Capri gives the panels her skin too (notch.css, [data-skin="capri"]).
+  document.documentElement.dataset.skin = cleanLook(look).kind === "capri" ? "capri" : "pip";
 }
 
 export default function App() {

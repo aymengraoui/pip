@@ -12,11 +12,15 @@ import * as particles from "./particles.js";
 import * as sound from "./sound.js";
 import { say } from "./speech.js";
 import { lines } from "./voices.js";
+import * as skin from "./skin.js";
+import * as portrait from "./portrait.js";
 import { mouse, fresh } from "./pointer.js";
 import { agents, mood, MOODS, notePoke } from "./model.js";
 
 /** What this creature says at a moment: its own voice (voices.js), else Pip's lines. */
 const voice = (moment, own) => pick(lines(lookMod.get().kind, moment, own));
+/** A line only some creatures have (Capri's chatter, her poke lines), or null. */
+const ownLine = (moment) => { const l = lines(lookMod.get().kind, moment, null); return l ? pick(l) : null; };
 
 /** Radius of the body at scale 1, in notch pixels. */
 const BASE_R = 13;
@@ -38,6 +42,8 @@ export const pip = {
   emoteName: null, emoteUntil: 0,
   petAcc: 0, petCooldown: 0, pokes: [], errorAt: 0, dropUntil: 0,
   whistleUntil: 0, nextNote: 0, nextZ: 0,
+  // Capri's skin glitches now and then, and whenever something goes wrong.
+  glitchUntil: 0, nextGlitch: 0,
 
   emote(name, dur) { this.emoteName = name; this.emoteUntil = now() + dur; },
   current() { return now() < this.emoteUntil ? this.emoteName : null; },
@@ -71,6 +77,7 @@ export function onMood(prev, next) {
       sound.sfx.alert();
       pip.emote("surprised", 0.6);
       pip.hop(160);
+      pip.glitchUntil = t + 0.4;
       say(voice("approval", ["psst! you're needed", "need your OK!", "can I? can I?", "permission, please!"]), 2.6);
       break;
     case "finished":
@@ -85,6 +92,7 @@ export function onMood(prev, next) {
       sound.sfx.error();
       pip.shake = 1;
       pip.errorAt = t;
+      pip.glitchUntil = t + 1.2;
       particles.emit("smoke", pip.x, pip.y - 6, 6);
       say(voice("error", ["uh oh…", "oops!", "that didn't work…"]), 2.4);
       break;
@@ -182,6 +190,12 @@ export function poke() {
   pip.sy.vel -= 5;
   pip.hop(110);
   particles.emit("heart", pip.x, pip.y + 4, 2);
+  // Capri doesn't just giggle: she glitches, and usually has something to say.
+  if (skin.isCapri()) {
+    pip.glitchUntil = t + 0.3;
+    const line = ownLine("poked");
+    if (line && Math.random() < 0.6) say(line, 1.6);
+  }
 }
 
 /** Wiggling the cursor over Pip pets it; enough petting earns a purr. */
@@ -295,7 +309,18 @@ function stepAntics(dt, t, em, R) {
     if (act === "yawn") { pip.emote("yawn", 1.5); sound.sfx.yawn(); }
     if (act === "twirl") { pip.twirl(); pip.hop(100); }
     if (act === "wave") pip.emote("proud", 1.2);
+    // Capri gets bored out loud.
+    if (skin.isCapri() && Math.random() < 0.55) {
+      const line = ownLine("idle");
+      if (line) say(line, 3);
+      pip.glitchUntil = t + 0.35;
+    }
     pip.nextIdle = t + rand(18, 40);
+  }
+  // And she glitches on her own every so often, awake.
+  if (skin.isCapri() && mood !== "sleeping" && t > pip.nextGlitch) {
+    if (pip.nextGlitch) pip.glitchUntil = t + rand(0.15, 0.35);
+    pip.nextGlitch = t + rand(6, 16);
   }
   if (t < pip.whistleUntil && t > pip.nextNote) {
     particles.emit("note", pip.x + R * 0.6, pip.y + R * 0.2, 1);
@@ -350,11 +375,45 @@ export function face(t) {
   return { eyes, mouth };
 }
 
+/** Capri's face from the show for this moment, for her skin. */
+function capriFace(t) {
+  switch (pip.current()) {
+    case "giggle": return "laugh";
+    case "love": return "smug";
+    case "dizzy": return "many";
+    case "surprised": return "wide";
+    case "worried": case "yawn": return "aside";
+    case "proud": return "grin";
+  }
+  switch (mood) {
+    case "approval": return "many";
+    case "error": return "laugh";
+    case "finished": return "grin";
+    case "thinking": return "aside";
+    case "working": case "sleeping": return "calm";
+  }
+  const hovered = fresh(t) && Math.hypot(mouse.x - pip.x, mouse.y - pip.y) < 60;
+  return hovered ? "look" : Math.sin(t * 0.13) > 0.6 ? "smug" : "calm";
+}
+
 export function draw(t) {
   const look = face(t);
   const lk = lookMod.get();
   const shake = pip.shake > 0 ? Math.sin(t * 45) * 0.18 * pip.shake : 0;
   const tilt = mood === "thinking" ? Math.sin(t * 1.4) * 0.08 : mood === "working" ? Math.sin(t * 5) * 0.05 : 0;
+  // Capri's skin: her face from the show in a cut-corner frame, not a drawn
+  // creature. Until the image has loaded she is drawn like any other kind.
+  if (skin.isCapri()) {
+    const size = pip.radius() * 2.6 * pip.intro.v;
+    if (size > 1 && portrait.draw(pip.x, pip.y, size, {
+      face: capriFace(t), t,
+      sx: pip.sx.v * Math.cos(pip.spin), sy: pip.sy.v, rot: shake + tilt,
+      glitch: t < pip.glitchUntil ? 1 : 0, dim: mood === "sleeping" ? 1 : 0,
+    })) {
+      drawBadge(t);
+      return;
+    }
+  }
   creature.draw(pip.x, pip.y, pip.s * pip.intro.v, {
     pal: lookMod.BODIES[lk.body], t, accessory: lk.accessory, kind: lk.kind,
     sx: pip.sx.v * Math.cos(pip.spin), sy: pip.sy.v,
@@ -393,7 +452,7 @@ function drawBadge(t) {
 
 /** Still moving in a way that wants 60 fps? */
 export function busy() {
-  return pip.jump < 0 || pip.spinV > 0 || pip.shake > 0.01;
+  return pip.jump < 0 || pip.spinV > 0 || pip.shake > 0.01 || pip.glitchUntil > now();
 }
 
 export function settling() {

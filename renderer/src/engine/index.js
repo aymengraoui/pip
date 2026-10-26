@@ -33,6 +33,8 @@ import * as sound from "./sound.js";
 import * as speech from "./speech.js";
 import * as watchdog from "./watchdog.js";
 import * as demoScript from "./demo.js";
+import * as skin from "./skin.js";
+import * as portrait from "./portrait.js";
 import { fresh } from "./pointer.js";
 import { now, wall } from "./util.js";
 
@@ -87,7 +89,12 @@ function maybeRing(e) {
 
 export function setMuted(on) { sound.setMuted(on); }
 /** Pip's colour, accessory, cheeks and notch theme, from settings.json. */
-export function setLook(l) { look.set(l); clock.wake(); }
+export function setLook(l) {
+  look.set(l);
+  // Capri's skin: her faces and fonts, loaded the first time she is picked.
+  if (skin.isCapri()) { portrait.preload(); skin.loadFonts(); }
+  clock.wake();
+}
 export function sfx(name) { sound.play(name); }
 export function speak(text, dur = 2.2) { speech.say(text, dur); clock.wake(); }
 export function wake() { clock.wake(); }
@@ -229,6 +236,7 @@ function ambientReason(t) {
   if (speech.current(t)) return "bubble";
   if (pip.current()) return "emote";
   if (t < pip.whistleUntil) return "whistle";
+  if (skin.decoding(t)) return "decode";
   return "";
 }
 

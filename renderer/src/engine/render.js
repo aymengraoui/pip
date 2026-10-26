@@ -11,6 +11,7 @@ import { L, ROW_H, ROW_TOP, answer, hoveredMini, hoveredRow, isPlaying, panelNam
 import { pip } from "./pip.js";
 import { current as currentBubble } from "./speech.js";
 import { theme } from "./look.js";
+import * as skin from "./skin.js";
 
 export function drawPill(t) {
   const x = L.x, w = L.w.v, h = L.h.v, r = Math.min(20, h / 2), e = 10;
@@ -29,18 +30,32 @@ export function drawPill(t) {
     ctx.shadowBlur = 10;
     ctx.shadowOffsetY = 2;
   }
-  // A notch: square at the top where it meets the screen edge, round below,
-  // with a small outward curve on each side so it grows out of the bezel.
-  ctx.beginPath();
-  ctx.moveTo(x - e, 0);
-  ctx.quadraticCurveTo(x, 0, x, e);
-  ctx.lineTo(x, h - r);
-  ctx.arcTo(x, h, x + r, h, r);
-  ctx.lineTo(x + w - r, h);
-  ctx.arcTo(x + w, h, x + w, h - r, r);
-  ctx.lineTo(x + w, e);
-  ctx.quadraticCurveTo(x + w, 0, x + w + e, 0);
-  ctx.closePath();
+  if (skin.isCapri()) {
+    // Capri's plate: hard edges, cut corners, a jagged bite out of the bottom,
+    // and her violet copy a step down and to the right.
+    ctx.save();
+    ctx.shadowColor = "transparent";
+    ctx.translate(4, 4);
+    capriPlate(x, w, h);
+    ctx.fillStyle = skin.VIOLET;
+    ctx.globalAlpha = 0.9;
+    ctx.fill();
+    ctx.restore();
+    capriPlate(x, w, h);
+  } else {
+    // A notch: square at the top where it meets the screen edge, round below,
+    // with a small outward curve on each side so it grows out of the bezel.
+    ctx.beginPath();
+    ctx.moveTo(x - e, 0);
+    ctx.quadraticCurveTo(x, 0, x, e);
+    ctx.lineTo(x, h - r);
+    ctx.arcTo(x, h, x + r, h, r);
+    ctx.lineTo(x + w - r, h);
+    ctx.arcTo(x + w, h, x + w, h - r, r);
+    ctx.lineTo(x + w, e);
+    ctx.quadraticCurveTo(x + w, 0, x + w + e, 0);
+    ctx.closePath();
+  }
   ctx.fillStyle = theme().bg;
   ctx.fill();
   ctx.restore();
@@ -71,6 +86,30 @@ export function drawPill(t) {
   ctx.globalAlpha = 1;
 }
 
+/** Capri's notch: flush with the bezel, cut corners below, a bite in the bottom edge. */
+function capriPlate(x, w, h) {
+  const c = 12, b = x + w * 0.62;
+  ctx.beginPath();
+  ctx.moveTo(x - 6, 0);
+  ctx.lineTo(x + w + 6, 0);
+  ctx.lineTo(x + w, 8);
+  ctx.lineTo(x + w, h - c);
+  ctx.lineTo(x + w - c, h);
+  ctx.lineTo(b + 11, h);
+  ctx.lineTo(b + 5, h - 6);
+  ctx.lineTo(b, h);
+  ctx.lineTo(x + c, h);
+  ctx.lineTo(x, h - c);
+  ctx.lineTo(x, 8);
+  ctx.closePath();
+}
+
+/** A button on the notch: round for Pip, cut corners for Capri. */
+function buttonPath(r, radius) {
+  if (skin.isCapri()) skin.plate(ctx, r.x, r.y, r.w, r.h, 6);
+  else { ctx.beginPath(); ctx.roundRect(r.x, r.y, r.w, r.h, radius); }
+}
+
 /** A five-pointed star, centred on x, y. */
 function starPath(x, y, r) {
   ctx.beginPath();
@@ -89,8 +128,9 @@ export function drawHeader(t) {
   const maxW = lerp(texts.textW, L.w.v - 72 - 132, ex);
   ctx.textBaseline = "alphabetic";
   ctx.fillStyle = "#FFFFFF";
-  ctx.font = `600 ${lerp(13, 14, ex)}px ${FONT}`;
-  const title = fit(texts.title, maxW);
+  ctx.font = skin.titleFont(lerp(13, 14, ex));
+  // Capri's title decodes in, letter by letter, behind a tail of noise.
+  const title = fit(skin.decoded(texts.title, t), maxW);
   ctx.fillText(title, tx, lerp(22, 28, ex));
   // Wanted stars: failed tool calls one after the other. Five, and they flash.
   if (texts.stars) {
@@ -104,7 +144,7 @@ export function drawHeader(t) {
     ctx.fillStyle = "#FFFFFF";
   }
   ctx.fillStyle = theme().sub;
-  ctx.font = `11px ${FONT}`;
+  ctx.font = skin.subFont(11);
   ctx.fillText(fit(texts.sub, maxW), tx, lerp(38, 45, ex));
 
   // "Answer" while a holocall rings: Claude finished while you were elsewhere.
@@ -113,8 +153,7 @@ export function drawHeader(t) {
     const blue = MOODS.working.accent;
     ctx.save();
     ctx.globalAlpha = 1 - ex * 2;
-    ctx.beginPath();
-    ctx.roundRect(a.x, a.y, a.w, a.h, 11);
+    buttonPath(a, 11);
     ctx.fillStyle = "rgba(61,155,255,0.16)";
     ctx.fill();
     ctx.strokeStyle = blue;
@@ -135,8 +174,7 @@ export function drawHeader(t) {
     const accent = MOODS.approval.accent;
     ctx.save();
     ctx.globalAlpha = 1 - ex * 2;
-    ctx.beginPath();
-    ctx.roundRect(r.x, r.y, r.w, r.h, 11);
+    buttonPath(r, 11);
     ctx.fillStyle = "rgba(255,159,10,0.14)";
     ctx.fill();
     ctx.strokeStyle = accent;
@@ -211,13 +249,13 @@ function drawSessionRow(s, y, right) {
   ctx.fillStyle = MOODS[s.state].accent;
   ellipse(L.x + 32, y - 4, 4, 4);
   ctx.fillStyle = "#FFFFFF";
-  ctx.font = `600 12px ${FONT}`;
+  ctx.font = skin.bodyFont(12);
   const name = fit(project(s.cwd) || "session", 140);
   ctx.fillText(name, L.x + 48, y);
   const nw = ctx.measureText(name).width;
 
   ctx.fillStyle = theme().sub;
-  ctx.font = `11.5px ${FONT}`;
+  ctx.font = skin.subFont(11.5);
   let what = MOODS[s.state].label;
   if (s.state === "working" && s.tool) what = s.tool;
   const extra = s.detail && s.state !== "finished" ? ` · ${s.detail}` : "";
@@ -227,13 +265,13 @@ function drawSessionRow(s, y, right) {
 function drawAgentRow(m, y, right) {
   // The sproutling itself stands at L.x + 32 on this line (see layout.js).
   ctx.fillStyle = `hsl(${m.hue},75%,76%)`;
-  ctx.font = `600 12px ${FONT}`;
+  ctx.font = skin.bodyFont(12);
   const name = fit(m.type, 130);
   ctx.fillText(name, L.x + 48, y);
   const nw = ctx.measureText(name).width;
 
   ctx.fillStyle = theme().sub;
-  ctx.font = `11.5px ${FONT}`;
+  ctx.font = skin.subFont(11.5);
   const doing = m.state === "done" ? "done ✓"
     : m.tool ? `${m.tool}${m.toolDetail ? " " + m.toolDetail : ""}`
     : m.desc || "working";
@@ -269,7 +307,8 @@ export function drawBubble(t) {
   const k = clamp((t - t0) / 0.18, 0, 1);
   const fade = clamp((until - t) / 0.25, 0, 1);
   const sc = easeOutBack(k);
-  ctx.font = `600 12px ${FONT}`;
+  const capri = skin.isCapri();
+  ctx.font = skin.bodyFont(12);
   const label = fit(text, 300);
   const bw = ctx.measureText(label).width + 18, bh = 24;
   // Close enough that the tail can bridge the gap and touch whoever is talking:
@@ -292,19 +331,41 @@ export function drawBubble(t) {
   ctx.translate(x, by);
   ctx.scale(sc, sc);
   ctx.translate(-x, -by);
-  ctx.shadowColor = "rgba(0,0,0,0.3)";
-  ctx.shadowBlur = 8;
-  ctx.fillStyle = "#FFFFFF";
-  ctx.beginPath();
-  ctx.roundRect(bx, by, bw, bh, 11);
-  if (tail) {
-    ctx.moveTo(x - 6, by + 1);
-    ctx.lineTo(x, by - tail);
-    ctx.lineTo(x + 6, by + 1);
+  if (capri) {
+    // Her transmissions: a dark cut-corner plate, her violet copy behind it, a
+    // red bar down the left, and a jagged tail.
+    const plate = (dx) => {
+      skin.plate(ctx, bx + dx, by + dx, bw, bh, 7);
+      if (tail) {
+        ctx.moveTo(x - 5 + dx, by + 1 + dx);
+        ctx.lineTo(x + 2 + dx, by - tail + dx);
+        ctx.lineTo(x - 1 + dx, by - tail * 0.45 + dx);
+        ctx.lineTo(x + 6 + dx, by + 1 + dx);
+      }
+    };
+    plate(3);
+    ctx.fillStyle = skin.VIOLET;
+    ctx.fill();
+    plate(0);
+    ctx.fillStyle = "#130D1A";
+    ctx.fill();
+    ctx.fillStyle = skin.RED;
+    ctx.fillRect(bx + 3, by + 5, 2, bh - 10);
+  } else {
+    ctx.shadowColor = "rgba(0,0,0,0.3)";
+    ctx.shadowBlur = 8;
+    ctx.fillStyle = "#FFFFFF";
+    ctx.beginPath();
+    ctx.roundRect(bx, by, bw, bh, 11);
+    if (tail) {
+      ctx.moveTo(x - 6, by + 1);
+      ctx.lineTo(x, by - tail);
+      ctx.lineTo(x + 6, by + 1);
+    }
+    ctx.fill();
+    ctx.shadowBlur = 0;
   }
-  ctx.fill();
-  ctx.shadowBlur = 0;
-  ctx.fillStyle = "#1B1B22";
+  ctx.fillStyle = capri ? skin.PAPER : "#1B1B22";
   ctx.textBaseline = "middle";
   ctx.fillText(label, bx + 9, by + bh / 2 + 0.5);
   ctx.textBaseline = "alphabetic";

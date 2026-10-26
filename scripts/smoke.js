@@ -17,6 +17,7 @@ import * as watchdog from "../renderer/src/engine/watchdog.js";
 import { pip } from "../renderer/src/engine/pip.js";
 import * as gfx from "../renderer/src/engine/gfx.js";
 import { host } from "../renderer/src/engine/bridge.js";
+import { isCapri } from "../renderer/src/engine/skin.js";
 import { ACCESSORIES, BODIES, KINDS, THEMES, get as getLook } from "../renderer/src/engine/look.js";
 
 // -- virtual clock, so 10 minutes of Pip take 20 ms ---------------------------
@@ -557,6 +558,15 @@ await null; await null;
 advance(300);
 check("finishing while you're looking at it doesn't", !call, JSON.stringify(call));
 host.isAway = awayBefore;
+
+// -- Capri's skin ---------------------------------------------------------------
+
+engine.setLook({ kind: "capri" });
+advance(1500);
+check("picking Capri puts her skin on the notch", isCapri());
+engine.setLook({ kind: "sprout" });
+advance(300);
+check("any other creature takes it off again", !isCapri());
 
 console.log(failures ? `\n${failures} check(s) failed` : "\nall checks passed");
 process.exit(failures ? 1 : 0);
