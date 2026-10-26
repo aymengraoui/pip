@@ -9,6 +9,9 @@ if (location.hash === "#icon") {
   document.body.appendChild(c);
   drawIcon(c, 256);
   document.title = "icon-ready";
+} else if (location.hash === "#roam") {
+  // Pip out on the desktop: the small window electron/roam.js moves around.
+  import("../roam/roam.js");
 } else {
   createRoot(document.getElementById("root")).render(<App />);
 }

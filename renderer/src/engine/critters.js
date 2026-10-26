@@ -1,5 +1,5 @@
-// The creatures Pip can be besides a sprout: a kitty, a bunny, a puppy and a
-// robot, each its own whole animal. creature.js draws the face on top, at the
+// The creatures Pip can be besides a sprout: a kitty, a bunny, a puppy, a
+// robot and a construct, each its own whole animal. creature.js draws the face on top, at the
 // same spot for all of them, so every expression works on every creature.
 //
 // Each one is drawn in two passes around that face:
@@ -19,13 +19,16 @@ const INK = "#1E2230";
 const PINK = "#FFB3C7";
 const NOSE = "#FF8FAE";
 
-/** How a creature's face is drawn: robots get a dark visor and glowing marks. */
+/** How a creature's face is drawn: robots and constructs get glowing marks. */
 export function faceStyle(kind) {
-  return kind === "robot" ? { ink: "#7FF5E6", led: true } : { ink: INK, led: false };
+  if (kind === "robot") return { ink: "#7FF5E6", led: true };
+  if (kind === "construct") return { ink: "#9BE7FF", led: true };
+  return { ink: INK, led: false };
 }
 
 /** The default "smile" each animal makes; other mouths are shared. */
 export function smileFor(kind) {
+  if (kind === "construct") return "zigzag";
   return kind === "kitty" ? "cat" : kind === "bunny" ? "bunny" : kind === "puppy" ? "pup" : "smile";
 }
 
@@ -35,6 +38,7 @@ export function back(kind, o, R, s) {
     case "bunny": return bunny(o, R, s);
     case "puppy": return puppy(o, R, s);
     case "robot": return robot(o, R, s);
+    case "construct": return construct(o, R, s);
   }
 }
 
@@ -366,4 +370,143 @@ function robot(o, R, s) {
   ctx.moveTo(-R * 0.55, -R * 0.42);
   ctx.lineTo(-R * 0.2, -R * 0.42);
   ctx.stroke();
+}
+
+// -- construct ------------------------------------------------------------------
+// A personality construct from Night City: a mane of jagged shards, a dark suit,
+// and a green mask her eyes glow through. The mane is the coat's colour, so her
+// helpers come in theirs; the mask and the eyes are always hers.
+
+const MASK = "#3BE38A";
+const MASK_DARK = "#1C9C5C";
+const SOCKET = "#0F1C16";
+const SUIT = "#1B1426";
+const GLITCH = "rgba(122,60,255,0.55)";
+
+function construct(o, R, s) {
+  // While she works, a violet copy of her mane lags a step behind: a glitch.
+  if (o.prop) mane(o, R, GLITCH, R * 0.16 * Math.sign(Math.sin(o.leafSpin * 0.7) || 1));
+  mane(o, R, o.pal.mid, 0);
+  maneEdge(o, R, s);
+  specks(o, R, s);
+
+  // Little pointed boots, stepping while she works.
+  const step = o.walk ? Math.sin(o.t * 16) * R * 0.08 : 0;
+  for (const side of [-1, 1]) {
+    const x = side * R * 0.38, y = R * 0.9 + side * step;
+    ctx.fillStyle = SUIT;
+    ellipse(x, y, R * 0.21, R * 0.13);
+    ctx.fillStyle = o.pal.mid;
+    ellipse(x + side * R * 0.14, y + R * 0.02, R * 0.07, R * 0.06);
+  }
+
+  // The suit: dark, with a band of her colour across the chest.
+  blob(R, 0.86, 1.0, 0.98);
+  const g = ctx.createLinearGradient(0, -R * 0.86, 0, R * 0.98);
+  g.addColorStop(0, "#2D223A");
+  g.addColorStop(1, SUIT);
+  ctx.fillStyle = g;
+  ctx.fill();
+  ctx.fillStyle = o.pal.edge;
+  ctx.globalAlpha = 0.85;
+  ctx.beginPath();
+  ctx.moveTo(-R * 0.7, R * 0.66);
+  ctx.lineTo(R * 0.7, R * 0.66);
+  ctx.lineTo(R * 0.46, R * 0.84);
+  ctx.lineTo(-R * 0.46, R * 0.84);
+  ctx.closePath();
+  ctx.fill();
+  ctx.globalAlpha = 1;
+
+  // The mask, with dark sockets for the eyes and a slot for her grin.
+  ctx.beginPath();
+  ctx.roundRect(-R * 0.86, -R * 0.6, R * 1.72, R * 1.16, R * 0.48);
+  const m = ctx.createLinearGradient(0, -R * 0.6, 0, R * 0.56);
+  m.addColorStop(0, MASK);
+  m.addColorStop(1, MASK_DARK);
+  ctx.fillStyle = m;
+  ctx.fill();
+  ctx.strokeStyle = "rgba(255,255,255,0.35)";
+  ctx.lineWidth = Math.max(0.6, 0.9 * s);
+  ctx.beginPath();
+  ctx.moveTo(-R * 0.5, -R * 0.5);
+  ctx.lineTo(-R * 0.1, -R * 0.5);
+  ctx.stroke();
+  ctx.fillStyle = SOCKET;
+  for (const side of [-1, 1]) ellipse(side * R * 0.42, -R * 0.08, R * 0.3, R * 0.33);
+  ctx.beginPath();
+  ctx.roundRect(-R * 0.3, R * 0.26, R * 0.6, R * 0.2, R * 0.08);
+  ctx.fill();
+}
+
+/** Her mane: a crown of shards fanning up and out from behind her head. */
+function mane(o, R, color, dx) {
+  ctx.save();
+  ctx.translate(dx, -R * 0.15);
+  ctx.rotate(o.leafAngle * 0.35);
+  ctx.beginPath();
+  for (const shard of shards(o, R)) {
+    ctx.lineTo(shard.base0.x, shard.base0.y);
+    ctx.lineTo(shard.tip.x, shard.tip.y);
+    ctx.lineTo(shard.base1.x, shard.base1.y);
+  }
+  ctx.closePath();
+  ctx.fillStyle = color;
+  ctx.fill();
+  ctx.restore();
+}
+
+/** A darker line down each shard, so the mane reads as shards, not a blob. */
+function maneEdge(o, R, s) {
+  ctx.save();
+  ctx.translate(0, -R * 0.15);
+  ctx.rotate(o.leafAngle * 0.35);
+  ctx.strokeStyle = o.pal.edge;
+  ctx.lineWidth = Math.max(0.6, 1 * s);
+  ctx.lineCap = "round";
+  ctx.beginPath();
+  for (const shard of shards(o, R)) {
+    ctx.moveTo(shard.mid.x, shard.mid.y);
+    ctx.lineTo(shard.tip.x, shard.tip.y);
+  }
+  ctx.stroke();
+  ctx.restore();
+}
+
+/** The white specks in her mane, twinkling. */
+function specks(o, R, s) {
+  ctx.save();
+  ctx.translate(0, -R * 0.15);
+  ctx.rotate(o.leafAngle * 0.35);
+  for (let i = 0; i < 7; i++) {
+    const a = Math.PI * (1.1 + i * 0.13);
+    const r = R * (1.06 + (i % 3) * 0.1);
+    ctx.globalAlpha = 0.45 + 0.55 * Math.max(0, Math.sin(o.t * 2.6 + i * 2.1));
+    ctx.fillStyle = "#FFFFFF";
+    ellipse(Math.cos(a) * r, Math.sin(a) * r, R * 0.05 + s * 0.15, R * 0.05 + s * 0.15);
+  }
+  ctx.globalAlpha = 1;
+  ctx.restore();
+}
+
+/**
+ * Thirteen wide shards from her left side, over the top, to her right side, long
+ * and short in turn: the mane frames her whole head. They breathe slowly, bristle
+ * and jitter while she works; the longest reaches 1.45R above her centre, inside
+ * the 1.6R the notch has room for.
+ */
+function shards(o, R) {
+  const n = 13;
+  const bristle = o.prop ? 1.08 : 1;
+  const out = [];
+  for (let i = 0; i < n; i++) {
+    const a = Math.PI * (0.96 + (i / (n - 1)) * 1.08);
+    const long = i % 2 === 0 ? 1.4 : 1.12;
+    const breathe = 1 + Math.sin(o.t * 1.6 + i * 1.7) * 0.03;
+    const jitter = o.prop ? Math.sin(o.leafSpin * 0.9 + i * 2.3) * 0.04 : 0;
+    const len = R * long * bristle * (breathe + jitter);
+    const at = (ang, r) => ({ x: Math.cos(ang) * r, y: Math.sin(ang) * r });
+    out.push({ base0: at(a - 0.2, R * 0.72), base1: at(a + 0.2, R * 0.72), mid: at(a, R * 0.8), tip: at(a, len) });
+  }
+  return out;
 }

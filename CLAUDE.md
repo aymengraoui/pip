@@ -70,7 +70,7 @@ Import layers inside `renderer/src/engine/` — **imports only ever point down**
 which is what keeps this graph a DAG and the modules testable:
 
 ```
- 0  util  gfx  clock  bridge  sound  speech  pointer  look (no engine imports)
+ 0  util  gfx  clock  bridge  sound  speech  pointer  look  voices (no engine imports)
  1  particles  critters  creature  model                  (-> layer 0; creature -> critters)
  2  pip                                                   (-> model, creature, …)
  3  minis  inspector                                      (-> pip, model)
@@ -246,6 +246,56 @@ polled every 15 s from the main process and off entirely in game mode. Past thre
 minutes you are away, and `model.totals` is snapshotted; on return the difference
 becomes one spoken line. One line, once — no badge, no list to dismiss.
 
+## RAM, heat and the holocall
+
+Three things on the pill, each one line of state in the model and a few strokes
+in `render.js`:
+
+- **RAM.** `hook.js` records `tp`, the session's transcript path. The main
+  process reads the token counts of the last answer from its tail
+  (`electron/context.js`, cached a few seconds per file) and puts `ctx: {used, max}`
+  on the events it sends (`withContext`). `model.noteRam` keeps it as `s.ram`, and
+  the pill's bottom accent line becomes ten cells, lit as far as the lead
+  session's context is full: the mood's colour, amber past 60 %, red past 80 %.
+  Past 80 % Pip says so once (`reactions.onRam`), and again only after it has
+  dropped under 50 % (a compaction). The 1M window isn't written in the
+  transcript, so past 200k used it is assumed.
+- **Heat.** Failed tool calls one after the other are wanted stars, up to five,
+  drawn right after the title. Three clean calls take one off and a star fades
+  every 90 s. They are aged by the events' own `t` (`heatNow`), so a replay can't
+  bring old stars back, and `reactions.onHeat` only fires live.
+- **The holocall.** A live `Stop` asks the main process whether that session's
+  terminal is behind something else (`host.isAway` → `sessionAway`: the window
+  in front versus `windows.windowFor(pid)`, by pid). If it is, the pill glows
+  blue and carries "Answer →" (`layout.answer`), which raises the terminal like
+  Review does. It hangs up when that session moves on, or after a minute.
+  Unknown counts as not away, so it never rings for nothing; never on a replay,
+  never in the demo.
+
+## Out on the desktop
+
+With `settings.roam` on (off by default, Settings → Pip), Pip leaves the notch
+while Claude is quiet: idle or napping for 8 s. It hops into a window of its own
+(`electron/roam.js`, 96 px square) and perches on the top edge of the window you
+are working in, following it when it moves and strolling along it now and then;
+a maximized window has no edge below the notch, so then it walks along the
+bottom of the screen. Any other mood brings it home at once, and so does a click
+(it then stays home for two minutes).
+
+- **The notch keeps the status.** `pip.setOut` shrinks Pip away on its own intro
+  spring and turns its hit test off; the pill, the rows and the sproutlings stay.
+  The notch reports its mood and where Pip sits (`roam-mood`) whenever the mood
+  changes: that spot is where it hops out and back in.
+- **The main process moves the window**; the page (`renderer/src/roam/roam.js`,
+  the `#roam` hash of the same build) only draws: the same creature in the same
+  look, walking, in the air, landing, blinking. Timers run fast only while it
+  travels; perched, it is one poll a second and ten frames a second.
+- **Only Pip takes clicks.** The window ignores the mouse except while the page
+  reports the cursor over Pip (`roam-hover`), so it never eats a click on the
+  title bar it sits on.
+- **It stops while suspended**, like everything else: game mode or Pause land it
+  home and hide the window.
+
 ## Which screen Pip lives on
 
 `placeNotch` follows the work, not the OS: `windows.activeWindow()` reads the
@@ -338,6 +388,8 @@ add `--focus` to actually raise it.
 | right click | native menu from the main process | `bridge.host.menu` |
 | Go to terminal (in the panel) | raise the terminal that session runs in | `windows.focusProcess` |
 | Review → (on the notch, while waiting) | the same, one click from anywhere | `layout.review` + `input.js` |
+| Answer → (on the notch, while a holocall rings) | the same, for the session that just finished | `layout.answer` + `input.js` |
+| Pip, out roaming the desktop | come home, and stay home for two minutes | `roam.js` `click` |
 | gear, tray, 2nd instance | Settings | `send("panel", …)` |
 | tray → Activity | inspector on the busiest session | `engine.inspectLead` |
 
@@ -444,7 +496,8 @@ happens once.
   leaves use so every mood still reads; helpers are drawn as the same kind. An
   accessory needs a case in `creature.drawAccessory`, beside the sprout or
   antenna, never on top of it. Themes stay dark: the notch grows
-  out of the bezel. `look.set` drops names it doesn't know, so a setting saved by
+  out of the bezel. A creature can also have its own voice: lines per moment in
+  `engine/voices.js`; any moment it leaves out falls back to Pip's own lines in `pip.js`. `look.set` drops names it doesn't know, so a setting saved by
   a newer version can't break an older one.
 - `W`/`H` in `engine/gfx.js` must stay in sync with `electron/main.js`.
 - Keep `koffi` under `asarUnpack` in `package.json`, or game mode dies in the

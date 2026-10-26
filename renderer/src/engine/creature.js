@@ -7,7 +7,7 @@
 // })
 //
 // `kind` picks the creature (look.js KINDS). The sprout is drawn here; the
-// kitty, bunny, puppy and robot are their own whole bodies in critters.js. All
+// kitty, bunny, puppy, robot and construct are their own whole bodies in critters.js. All
 // of them wear the same face, drawn here, so every expression works on each.
 
 import { clamp } from "./util.js";
@@ -376,6 +376,11 @@ function drawMouth(o, R, ry, s, face, mouth) {
       break;
     case "whistle":
       ellipse(R * 0.05, my + R * 0.02, R * 0.05, R * 0.055);
+      break;
+    case "zigzag": // the construct's grin: a jagged line of teeth
+      ctx.beginPath();
+      for (let i = 0; i <= 6; i++) ctx.lineTo(-R * 0.22 + (i * R * 0.44) / 6, my - R * 0.06 + (i % 2 ? R * 0.08 : 0) + Math.abs(i - 3) * -R * 0.012);
+      ctx.stroke();
       break;
     default: // smile
       ctx.beginPath();

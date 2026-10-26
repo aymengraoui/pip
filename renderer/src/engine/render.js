@@ -6,8 +6,8 @@
 
 import { clamp, easeOutBack, lerp, project } from "./util.js";
 import { ctx, ellipse, fit, FONT, W } from "./gfx.js";
-import { agents, mood, MOODS } from "./model.js";
-import { L, ROW_H, ROW_TOP, hoveredMini, hoveredRow, isPlaying, panelName, review, rows, texts } from "./layout.js";
+import { agents, lead, mood, MOODS } from "./model.js";
+import { L, ROW_H, ROW_TOP, answer, hoveredMini, hoveredRow, isPlaying, panelName, review, rows, texts } from "./layout.js";
 import { pip } from "./pip.js";
 import { current as currentBubble } from "./speech.js";
 import { theme } from "./look.js";
@@ -20,6 +20,10 @@ export function drawPill(t) {
     // The one state worth glowing for.
     ctx.shadowColor = accent;
     ctx.shadowBlur = 12 + 10 * Math.sin(t * 5);
+  } else if (answer) {
+    // A holocall: a blue glow that rings in short bursts.
+    ctx.shadowColor = MOODS.working.accent;
+    ctx.shadowBlur = 8 + 12 * Math.max(0, Math.sin(t * 9)) * (Math.sin(t * 1.6) > 0 ? 1 : 0.3);
   } else {
     ctx.shadowColor = "rgba(0,0,0,0.45)";
     ctx.shadowBlur = 10;
@@ -43,14 +47,39 @@ export function drawPill(t) {
 
   // A soft accent line along the bottom edge: the mood, at a glance.
   const lw = Math.max(0, w - r * 2 - 10);
-  const grad = ctx.createLinearGradient(x + r, 0, x + r + lw, 0);
-  grad.addColorStop(0, "rgba(0,0,0,0)");
-  grad.addColorStop(0.5, accent);
-  grad.addColorStop(1, "rgba(0,0,0,0)");
-  ctx.globalAlpha = mood === "sleeping" ? 0.25 : 0.7;
-  ctx.fillStyle = grad;
-  ctx.fillRect(x + r + 5, h - 1.5, lw, 1.5);
+  const ram = lead && lead.ram != null ? clamp(lead.ram, 0, 1) : null;
+  if (ram == null) {
+    const grad = ctx.createLinearGradient(x + r, 0, x + r + lw, 0);
+    grad.addColorStop(0, "rgba(0,0,0,0)");
+    grad.addColorStop(0.5, accent);
+    grad.addColorStop(1, "rgba(0,0,0,0)");
+    ctx.globalAlpha = mood === "sleeping" ? 0.25 : 0.7;
+    ctx.fillStyle = grad;
+    ctx.fillRect(x + r + 5, h - 1.5, lw, 1.5);
+  } else {
+    // When Claude's context is known, the line is a RAM gauge: ten cells, lit as
+    // far as it's full, in the mood's colour until it's getting crowded.
+    const cells = 10, gap = 3, cw = (lw - gap * (cells - 1)) / cells;
+    const lit = Math.max(1, Math.round(ram * cells));
+    const fill = ram >= 0.8 ? MOODS.error.accent : ram >= 0.6 ? MOODS.approval.accent : accent;
+    for (let i = 0; i < cells; i++) {
+      ctx.globalAlpha = i < lit ? (mood === "sleeping" ? 0.35 : 0.85) : 0.14;
+      ctx.fillStyle = i < lit ? fill : "#FFFFFF";
+      ctx.fillRect(x + r + 5 + i * (cw + gap), h - 2, cw, 2);
+    }
+  }
   ctx.globalAlpha = 1;
+}
+
+/** A five-pointed star, centred on x, y. */
+function starPath(x, y, r) {
+  ctx.beginPath();
+  for (let i = 0; i < 10; i++) {
+    const a = -Math.PI / 2 + (i * Math.PI) / 5;
+    const rr = i % 2 ? r * 0.45 : r;
+    ctx.lineTo(x + Math.cos(a) * rr, y + Math.sin(a) * rr);
+  }
+  ctx.closePath();
 }
 
 export function drawHeader(t) {
@@ -61,10 +90,44 @@ export function drawHeader(t) {
   ctx.textBaseline = "alphabetic";
   ctx.fillStyle = "#FFFFFF";
   ctx.font = `600 ${lerp(13, 14, ex)}px ${FONT}`;
-  ctx.fillText(fit(texts.title, maxW), tx, lerp(22, 28, ex));
+  const title = fit(texts.title, maxW);
+  ctx.fillText(title, tx, lerp(22, 28, ex));
+  // Wanted stars: failed tool calls one after the other. Five, and they flash.
+  if (texts.stars) {
+    const sx = tx + ctx.measureText(title).width + 10;
+    const flash = texts.stars >= 5 && Math.sin(t * 10) > 0;
+    ctx.fillStyle = flash ? MOODS.working.accent : MOODS.error.accent;
+    for (let i = 0; i < texts.stars; i++) {
+      starPath(sx + i * 11, lerp(17, 23, ex), 4.5);
+      ctx.fill();
+    }
+    ctx.fillStyle = "#FFFFFF";
+  }
   ctx.fillStyle = theme().sub;
   ctx.font = `11px ${FONT}`;
   ctx.fillText(fit(texts.sub, maxW), tx, lerp(38, 45, ex));
+
+  // "Answer" while a holocall rings: Claude finished while you were elsewhere.
+  if (answer) {
+    const a = answer;
+    const blue = MOODS.working.accent;
+    ctx.save();
+    ctx.globalAlpha = 1 - ex * 2;
+    ctx.beginPath();
+    ctx.roundRect(a.x, a.y, a.w, a.h, 11);
+    ctx.fillStyle = "rgba(61,155,255,0.16)";
+    ctx.fill();
+    ctx.strokeStyle = blue;
+    ctx.lineWidth = 1;
+    ctx.stroke();
+    ctx.fillStyle = blue;
+    ctx.font = `600 11px ${FONT}`;
+    ctx.textAlign = "center";
+    ctx.fillText("Answer →", a.x + a.w / 2, a.y + 15);
+    ctx.textAlign = "left";
+    ctx.restore();
+    return;
+  }
 
   // "Review" while Claude is waiting: one click to the terminal that is asking.
   if (review) {

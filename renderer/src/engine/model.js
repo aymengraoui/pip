@@ -41,7 +41,7 @@ export let lead = null;
 /** Running totals, so Pip can say what happened while you were away. */
 export const totals = { turns: 0, failures: 0, helpers: 0, asked: 0 };
 
-const reactions = { onSpawn() {}, onFinish() {}, onMood() {} };
+const reactions = { onSpawn() {}, onFinish() {}, onMood() {}, onHeat() {}, onRam() {} };
 export function setReactions(r) { Object.assign(reactions, r); }
 
 const bootWall = wall();
@@ -103,6 +103,52 @@ function remember(x) {
   if (history.length > HISTORY_MAX) history.pop();
 }
 
+// -- heat ---------------------------------------------------------------------
+// Failed tool calls one after the other are heat: wanted stars, up to five.
+// Three clean calls in a row take one off, and a star fades every 90 s without
+// trouble. Aged by the events' own time, so a replay can't bring old stars back.
+
+const HEAT_MAX = 5;
+const COOL_AFTER = 3;
+const HEAT_FADE_MS = 90e3;
+let heat = 0, heatT = 0, clean = 0;
+
+/** How many stars right now (or at time t). */
+export function heatNow(t = wall()) {
+  return heat ? Math.max(0, heat - Math.floor((t - heatT) / HEAT_FADE_MS)) : 0;
+}
+
+function heatUp(e, quiet) {
+  const before = heatNow(e.t);
+  heat = Math.min(HEAT_MAX, before + 1);
+  heatT = e.t || wall();
+  clean = 0;
+  if (!quiet && heat > before) reactions.onHeat(heat);
+}
+
+function coolDown(e) {
+  const now = heatNow(e.t);
+  if (!now || ++clean < COOL_AFTER) return;
+  clean = 0;
+  heat = now - 1;
+  heatT = e.t || wall();
+}
+
+// -- context ------------------------------------------------------------------
+
+const RAM_WARN = 0.8;
+
+/** How full this session's context is, when the main process could tell (`ctx`). */
+function noteRam(s, e, quiet) {
+  if (!e.ctx || !(e.ctx.max > 0)) return;
+  s.ram = Math.min(1, Math.max(0, e.ctx.used / e.ctx.max));
+  if (s.ram < 0.5) s.ramWarned = false; // compacted: it may warn again
+  if (s.ram >= RAM_WARN && !s.ramWarned) {
+    s.ramWarned = true;
+    if (!quiet) reactions.onRam(s);
+  }
+}
+
 // -- sessions & agents --------------------------------------------------------
 
 function sessionOf(e) {
@@ -113,6 +159,7 @@ function sessionOf(e) {
       kind: "session", key: "s:" + sid, sid, state: "idle", tool: "", detail: "", cwd: "", pid: 0,
       t: e.t, startedWall: e.t || wall(), endedWall: 0, prompt: "",
       log: [], tools: 0, spawned: 0, open: new Map(),
+      ram: null, ramWarned: false,
     };
     sessions.set(sid, s);
   }
@@ -203,6 +250,8 @@ export function apply(e, quiet) {
       if (e.ev === "PostToolUse" || e.ev === "PostToolUseFailure") {
         m.tool = "";
         closeTool(m, e, e.ev === "PostToolUseFailure");
+        if (e.ev === "PostToolUseFailure") heatUp(e, quiet);
+        else coolDown(e);
       }
     }
     if (e.ev === "PermissionRequest" || (e.ev === "Notification" && e.ntype === "permission_prompt")) {
@@ -217,6 +266,7 @@ export function apply(e, quiet) {
   }
 
   const s = sessionOf(e);
+  noteRam(s, e, quiet);
   switch (e.ev) {
     case "SessionStart":
       s.state = "idle";
@@ -245,7 +295,12 @@ export function apply(e, quiet) {
       s.state = "thinking";
       s.tool = "";
       closeTool(s, e, e.ev === "PostToolUseFailure");
-      if (e.ev === "PostToolUseFailure") totals.failures++;
+      if (e.ev === "PostToolUseFailure") {
+        totals.failures++;
+        heatUp(e, quiet);
+      } else {
+        coolDown(e);
+      }
       if (AGENT_TOOLS.has(e.tool)) {
         const m = agents.get("tu:" + e.tuid);
         // A background agent keeps working after its tool call returns, and

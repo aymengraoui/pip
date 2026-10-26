@@ -19,6 +19,9 @@ const DEFAULTS = {
   // area's width: 0.5 is the middle. A fraction, so it survives a resolution
   // change or a move to another screen.
   notchX: 0.5,
+  // Whether Pip hops out of the notch and roams the desktop while Claude is
+  // idle (electron/roam.js). Off by default: it is a companion, not a screensaver.
+  roam: false,
   // What Pip is, its colour, what it wears, rosy cheeks, the notch's theme. Names are
   // the keys in renderer/src/engine/look.js; unknown ones fall back to defaults.
   // Keep in step with DEFAULT_LOOK there.

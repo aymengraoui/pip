@@ -189,6 +189,7 @@ export default function Settings({ state, demoOn, onDemo, onStopDemo }) {
           <Section title="Pip">
             <Toggle label="Start with Windows" on={state.startup} onChange={(on) => pip.setStartup(on)} />
             <Toggle label="Sounds" on={!s.muted} onChange={(on) => set({ muted: !on })} />
+            <Toggle label="Roam the desktop when idle" on={!!s.roam} onChange={(on) => set({ roam: on })} />
             <ScreenPicker displays={state.displays || []} value={s.screen} onChange={(screen) => set({ screen })} />
           </Section>
           <Section title="Game mode" aside={state.gaming ? "asleep: a game is running" : null}>

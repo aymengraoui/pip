@@ -92,6 +92,10 @@ process.stdin.on("end", () => {
       // subagent works on until its SubagentStop. The Agent tool has no
       // run_in_background, so the launch itself is the signal.
       bg: spawnsAgent,
+      // Where Claude keeps this session's transcript. The main process reads the
+      // token counts of its last answer from it, for the RAM gauge; only the
+      // path travels, the file stays where it is.
+      tp: e.transcript_path || "",
     }) + "\n";
 
     fs.appendFileSync(LOG, line);

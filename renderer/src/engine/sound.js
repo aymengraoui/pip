@@ -44,6 +44,7 @@ export const sfx = {
   note() { const f = pick([784, 880, 988, 1047, 1175]); tone(f, f, 0.16, { vol: 0.025 }); },
   open() { tone(300, 620, 0.1, { vol: 0.03 }); },
   close() { tone(620, 300, 0.1, { vol: 0.03 }); },
+  ring() { for (let r = 0; r < 2; r++) for (let i = 0; i < 4; i++) { const f = i % 2 ? 1175 : 1480; tone(f, f, 0.055, { type: "square", vol: 0.022, delay: r * 0.42 + i * 0.065 }); } },
 };
 
 export function play(name) { sfx[name] && sfx[name](); }

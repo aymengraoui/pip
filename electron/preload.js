@@ -15,6 +15,8 @@ contextBridge.exposeInMainWorld("pip", {
   onDemo: on("demo"),
   onAway: on("away"),
   onDragEnd: on("drag-end"),
+  onRoam: on("roam"),
+  onRoamPose: on("roam-pose"),
   setHitRects: (rects) => ipcRenderer.send("hit-rects", rects),
   setWinHeight: (h) => ipcRenderer.send("win-height", h),
   setFocus: (on) => ipcRenderer.send("focus", on),
@@ -31,6 +33,12 @@ contextBridge.exposeInMainWorld("pip", {
   writeHooks: (install) => ipcRenderer.invoke("hooks:write", install),
   setStartup: (on) => ipcRenderer.invoke("startup:set", on),
   focusSession: (pid) => ipcRenderer.invoke("session:focus", pid),
+  isAway: (pid) => ipcRenderer.invoke("session:away", pid),
+  // Pip out on the desktop (electron/roam.js): the notch reports its mood and
+  // where Pip sits; the roaming window reports hover and clicks.
+  roamMood: (m) => ipcRenderer.send("roam-mood", m),
+  roamHover: (on) => ipcRenderer.send("roam-hover", !!on),
+  roamClick: () => ipcRenderer.send("roam-click"),
   checkUpdate: () => ipcRenderer.invoke("update:check"),
   installUpdate: () => ipcRenderer.invoke("update:install"),
 });
